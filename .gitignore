@@ -1,0 +1,15 @@
+boards/zephyr/efm32pg_stk3402a/userspace/shared_mem/.cproject
+boards/zephyr/efm32pg_stk3402a/userspace/shared_mem/.project
+boards/zephyr/efm32gg_stk3701a/net/sockets/echo_server/.cproject
+boards/zephyr/efm32gg_stk3701a/net/sockets/echo_server/.project
+.cproject
+.project
+.settings
+build
+*~
+*.o
+remote_attestation_server
+prover
+application_server
+modules/jedi-protocol
+logs
