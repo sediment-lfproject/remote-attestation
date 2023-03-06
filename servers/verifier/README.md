@@ -4,4 +4,4 @@
 -->
 # SEDIMENT Verifier
 
-See [SEDIMENT Servers](../README.md).
+See [SEDIMENT Project](../../README.md).

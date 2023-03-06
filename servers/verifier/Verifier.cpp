@@ -144,7 +144,7 @@ Message * Verifier::handleAttestationRequest(AttestationRequest *attReq, Endpoin
 
     Challenge *challenge = new Challenge();
     challenge->setDeviceID(attReq->getDeviceID());
-    challenge->setBlockSize(getFirmwareSize(device->getFirmware()));
+    challenge->setBlockSize(getFirmwareSize(getSedimentHome() + device->getFirmware()));
     challenge->setBlockCount(1);
 
     vector<uint8_t> &types = device->getEvidenceTypes();
@@ -336,7 +336,8 @@ bool Verifier::verifyFullFirmware(EvidenceItem *item, Device *device, EvidenceTy
         SD_LOG(LOG_ERR, "%s envidence must be encoded as HMAC_SHA256", Log::toEvidencetype(type).c_str());
         return false;
     }
-    string filename = (type == EVIDENCE_UDF_LIB) ? "/tmp/sediment_udf.so" : device->getFirmware();
+    string filename = (type == EVIDENCE_UDF_LIB) ? "lib/sediment_udf.so" : device->getFirmware();
+    filename = getSedimentHome() + filename;
     int fileSize    = getFirmwareSize(filename);
 
     int fd = open(filename.c_str(), O_RDONLY);

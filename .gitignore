@@ -13,3 +13,5 @@ prover
 application_server
 modules/jedi-protocol
 logs
+.vscode/
+uncrustify.cfg

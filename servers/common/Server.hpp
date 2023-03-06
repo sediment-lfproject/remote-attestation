@@ -19,6 +19,7 @@ class Server : public StateMachine
 {
 protected:
     CryptoServer cryptoServer;
+    string sediment_home;
 
     void runProcedure(EndpointSock *epSock);
 
@@ -51,7 +52,8 @@ protected:
 public:
     Server(Config &config, Board *board, CommandLine &cli)
         : StateMachine(config, board, true),
-        cryptoServer(cli)
+        cryptoServer(cli),
+        sediment_home(cli.getSedimentHome())
     {
         Device::open(cli.getDatabase());
     }
@@ -63,6 +65,11 @@ public:
     const CryptoServer& getCryptoServer() const
     {
         return cryptoServer;
+    }
+
+    const string& getSedimentHome() const
+    {
+        return sediment_home;
     }
 
     void run();
