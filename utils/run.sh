@@ -57,6 +57,8 @@ if [ ! -z "$LOGGING" ]; then
     LOG_PROVER="| tee prover.log"
 fi
 
+cd $SEDIMENT/build
+
 # set up tmux
 tmux start-server
 
@@ -65,11 +67,11 @@ tmux new-session -d -s $session -n verifier #"vim -S ~/.vim/sessions/kittybusine
 
 # Select pane 1, set dir to api, run verifier
 #tmux selectp -t 1
-tmux send-keys "cd $SEDIMENT/servers/firewall/build/; $VALGRIND ./firewall $ARG_CONFIG $LOG_FIREWALL" C-m
+tmux send-keys "$VALGRIND ./verifier $ARG_CONFIG $LOG_VERIFIER" C-m
 
 # Split pane 1 horizontal by 65%, start app_server
 tmux splitw -h -p 50
-#tmux send-keys "cd $SEDIMENT/servers/application/build/; $VALGRIND ./app_server $ARG_CONFIG $LOG_APP_SERVER" C-m
+#tmux send-keys "$VALGRIND ./app_server $ARG_CONFIG $LOG_APP_SERVER" C-m
 
 # Select pane 2
 #tmux selectp -t 2
@@ -78,12 +80,12 @@ tmux splitw -h -p 50
 
 # select pane 3, set to firewall
 #tmux selectp -t 3
-tmux send-keys "cd $SEDIMENT/servers/verifier/build/; $VALGRIND ./verifier $ARG_CONFIG $LOG_VERIFIER" C-m
+tmux send-keys "$VALGRIND ./firewall $ARG_CONFIG $LOG_FIREWALL" C-m
 
 if [[ -z "$PROVER" || "$PROVER" == "rpi" ]]; then
     tmux selectp -t 0
     tmux splitw -v -p 50
-    tmux send-keys "cd $SEDIMENT/apps/rpi/build/; $VALGRIND ./sediment $ARG_CONFIG $LOG_PROVER" C-m
+    tmux send-keys "$VALGRIND ./sediment $ARG_CONFIG $LOG_PROVER" C-m
 else
     case "${PROVER}" in
        none)
@@ -91,7 +93,7 @@ else
       gecko)
             tmux selectp -t 0
             tmux splitw -v -p 50
-            tmux send-keys "cd $SEDIMENT/apps/rpi/build/; minicom -D /dev/ttyACM0 -C prover.log" C-m
+            tmux send-keys "minicom -D /dev/ttyACM0 -C prover.log" C-m
             ;;
       *) echo "unsupported device"
          exit                      ;;

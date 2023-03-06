@@ -5,6 +5,7 @@
  */
 
 #include <iostream>
+#include <filesystem>
 #include <getopt.h>
 
 #include "CommandLine.hpp"
@@ -17,6 +18,8 @@ void CommandLine::printUsage(char *cmd)
     cout << cmd << endl
          << "  -d/--database <device database>\n\t"
          << "Use the specified device database." << endl
+         << "  -e/--sediment-home <sediment home directory>\n\t"
+         << "Set the sediment installation directory." << endl
          << "  -p/--wdkibe-pub-key <publisher key file>\n\t"
          << "Read WKD-IBE publisher key material file. Used only by publishers." << endl
          << "  -s/--wdkibe-sub-key <subscriber key file>\n\t"
@@ -33,6 +36,7 @@ void CommandLine::parseCmdline(int argc, char *argv[])
 
     struct option long_options[] = {
         { "database",       required_argument, 0, 'd' },
+        { "sediment-home",  required_argument, 0, 'e' },
         { "wdkibe-pub-key", required_argument, 0, 'p' },
         { "wdkibe-sub-key", required_argument, 0, 's' },
         { "help",           no_argument,       0, 'h' },
@@ -41,13 +45,22 @@ void CommandLine::parseCmdline(int argc, char *argv[])
 
     int option_index = 0;
 
-    while ((c = getopt_long(argc, argv, "hd:p:s:",
+    while ((c = getopt_long(argc, argv, "hd:e:p:s:",
       long_options, &option_index)) != -1)
     {
         switch (c) {
         case 'd':
             database = optarg;
             break;
+        case 'e':
+            if (!filesystem::exists(optarg)) 
+            {
+                SD_LOG(LOG_ERR, "SEDIMENT home directory does not exist: %s", optarg);
+                exit(EXIT_FAILURE);
+            }
+            updateHome(optarg);
+            SD_LOG(LOG_INFO, "SEDIMENT overridden by command line: %s", sediment_home.c_str());                
+            break;            
         case 'p':
             publisherConfig = optarg;
             break;
