@@ -7,7 +7,7 @@ set(CMAKE_CXX_COMPILER g++)
 set(CMAKE_C_COMPILER gcc)
 set(RPI_BUILD true)
 
-project(sediment-project VERSION 0.0.0 LANGUAGES C CXX ASM)
+project(sediment VERSION 0.0.0 LANGUAGES C CXX ASM)
 
 set(ARC ${CMAKE_SYSTEM_PROCESSOR})
 set(LIB "lib/${ARC}")
@@ -26,7 +26,7 @@ include_directories(${MQTT})
 include_directories(${PROVER} PRIVATE data)
 include_directories(include)
 include_directories(modules)
-include_directories(servers/common)
+include_directories(${SVR_COMMON})
 
 link_libraries(
   mbedtls
@@ -37,14 +37,14 @@ link_libraries(
 )
 
 ### PROVER
-set(PROVER      sediment)
+set(PROVER      prover)
 set(APPS_COMMON apps/common)
 set(RPI         apps/rpi)
 
 file(GLOB PROVER_SRC
   ${RPI}/*.cpp
   ${APPS_COMMON}/*.cpp
-  servers/common/CommandLine.cpp
+  ${SVR_COMMON}/CommandLine.cpp
 )
 
 add_executable(${PROVER}
