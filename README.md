@@ -159,7 +159,14 @@ please update the osVersion column of the database accordingly.
 ### Using A Raspberry Pi Zero W
 Prepare RPi0 as follows.
 
-- Build the executable as described in [SEDIMENT App on RPi0](../apps/rpi/README.md).
+- Build the prover.
+```
+    $ cd $SEDIMENT
+    $ mkdir build; cd build
+    $ cmake ..
+    $ cmake --build . --target prover
+```
+
 - Copy the executable from RPi0 to the Ubuntu PC (hostname is ubuntu below)
 ```
     # scp $SEDIMENT/build/prover ubuntu:$SEDIMENT/data/testfiles/rpi

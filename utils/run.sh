@@ -85,7 +85,7 @@ tmux send-keys "$VALGRIND ./firewall $ARG_CONFIG $LOG_FIREWALL" C-m
 if [[ -z "$PROVER" || "$PROVER" == "rpi" ]]; then
     tmux selectp -t 0
     tmux splitw -v -p 50
-    tmux send-keys "$VALGRIND ./sediment $ARG_CONFIG $LOG_PROVER" C-m
+    tmux send-keys "$VALGRIND ./prover $ARG_CONFIG $LOG_PROVER" C-m
 else
     case "${PROVER}" in
        none)
