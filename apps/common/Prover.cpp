@@ -770,9 +770,9 @@ bool Prover::preapreEvidenceBootTime(Challenge *challenge, EvidenceItem *item)
 #include <dlfcn.h>
 #include "sediment_udf.hpp"
 
-string run_udf(EvidenceType evidenceType)
+string run_udf(EvidenceType evidenceType, string library)
 {
-    void *sediment = dlopen("./sediment_udf.so", RTLD_LAZY);
+    void *sediment = dlopen(library.c_str(), RTLD_LAZY);
 
     if (!sediment) {
         SD_LOG(LOG_ERR, "Cannot load library: %s", dlerror());
@@ -815,7 +815,8 @@ bool Prover::preapreEvidenceUDF(Challenge *challenge, EvidenceItem *item, Eviden
     item->setType(evidenceType);
     item->setEncoding(ENCODING_ENCRYPTED);
 
-    string udf = run_udf(evidenceType);
+    string library = sediment_home + "lib/sediment_udf.so";
+    string udf = run_udf(evidenceType, library);
     int udflen = udf.size(); // strlen(udf);
 
     // Each block is 16 byte. If the clear-text is multiple of block size,
@@ -896,7 +897,13 @@ bool Prover::prepareEvidenceFullFirmware(Challenge *challenge, EvidenceItem *ite
     vector<uint8_t> &nonce = challenge->getNonce();
 
     uint32_t blockSize      = challenge->getBlockSize();
-    string lib              = isUDF ? "./sediment_udf.so" : "sediment";
+
+#ifdef PLATFORM_RPI    
+    string library = sediment_home + "lib/sediment_udf.so";
+#else
+    string library = "ERROR lib";
+#endif
+    string lib              = isUDF ? library : "sediment";
     const uint8_t *starting = (const uint8_t *) board->getStartingAddr(lib, &blockSize);
 
     SD_LOG(LOG_INFO, "attest firmware starting address: %0x", starting);

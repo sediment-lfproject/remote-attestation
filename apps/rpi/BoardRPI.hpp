@@ -14,6 +14,11 @@ using namespace std;
 class BoardRPI : public Board
 {
 public:
+    BoardRPI(char *executable) :
+        executable(executable[0] == '.' ? executable + 1 : executable)
+    {
+    }
+
     virtual void sleepSec(uint32_t sec);
     virtual void getOS(char *buf, int len);
     virtual uint32_t getUptime();
@@ -24,4 +29,7 @@ public:
     virtual void * getStartingAddr(string &library_keyword, uint32_t *blockSize);
     virtual void saveAttestSqn(uint32_t sqn);
     virtual uint32_t getAttestSqn();
+
+private:
+    string executable;
 };

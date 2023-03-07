@@ -230,7 +230,7 @@ void * BoardRPI::getStartingAddr(string &lib_keyword, uint32_t *blockSize)
     }
 
     char keyword[64];
-    sprintf(keyword, "%s", lib_keyword.c_str());
+    sprintf(keyword, "%s", executable.c_str());
 
     void *ret = NULL;
     while (fgets(buf, LINE_SIZE, fp) != NULL) {
