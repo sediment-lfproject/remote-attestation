@@ -64,6 +64,8 @@ protected:
     bool prepareEvidenceFullFirmware(Challenge *challenge, EvidenceItem *item, uint32_t *elapsed, int *optional,
       bool isUDF);
 #ifdef PLATFORM_RPI
+    string sediment_home;
+
     bool preapreEvidenceUDF(Challenge *challenge, EvidenceItem *item, EvidenceType evidenceType);
 #endif
 
@@ -110,4 +112,16 @@ public:
         rpEndpoint.setAddress(addr);
         rpEndpoint.setPort(port);
     }
+
+#ifdef PLATFORM_RPI
+    const string& getSedimentHome() const
+    {
+        return sediment_home;
+    }
+
+    void setSedimentHome(string home)
+    {
+        sediment_home = home;
+    }
+#endif    
 };

@@ -23,6 +23,6 @@ install(TARGETS ${LIB_UDF}
 
 add_custom_command(
   TARGET ${LIB_UDF} POST_BUILD
-  COMMAND mv ${LIB_UDF}.so ..
-  COMMENT "mv ${LIB_UDF}.so .."
+  COMMAND mv ${LIB_UDF}.so ${CMAKE_SOURCE_DIR}/lib
+  COMMENT "mv ${LIB_UDF}.so ${CMAKE_SOURCE_DIR}/lib"
 )

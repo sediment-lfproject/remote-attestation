@@ -35,8 +35,11 @@ int main(int argc, char **argv)
 
     cout << config.toString() << endl;
 
-    BoardRPI *board = new BoardRPI();
+    BoardRPI *board = new BoardRPI(argv[0]);
     Prover prover(config, board);
+#ifdef PLATFORM_RPI
+    prover.setSedimentHome(cli.getSedimentHome());
+#endif
 
     if (config.getTransport() == TRANSPORT_MQTT)
         prover.runMqtt();
