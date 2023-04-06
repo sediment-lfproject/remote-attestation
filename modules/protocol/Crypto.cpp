@@ -531,7 +531,7 @@ int Crypto::checksum(KeyPurpose keyPurpose, Block *blocks, int block_count, uint
 int Crypto::checksum(const unsigned char *key, int key_size, Block *blocks, int block_count, uint8_t *digest,
   int digest_size)
 {
-    (void) digest_size;
+    memset(digest, '\0', digest_size);
 
     mbedtls_md_context_t ctx, *mbed_ctx;
 
