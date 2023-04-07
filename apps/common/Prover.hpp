@@ -78,6 +78,11 @@ public:
         : StateMachine(config, board, false),
         seec(config)
     {
+#ifdef PLATFORM_RPI
+        // The following are not necessary for non-Linux based devices 
+        // since they load configurations from the flash after the prover
+        // is constructed and overrides what's done here.
+        
         this->endpoint.copy(*config.getComponent().getOutgoing());
         this->rpEndpoint.copy(endpoint);
 
@@ -91,6 +96,7 @@ public:
 
         vector<uint8_t> &auth_key = config.getAuthKey();
         crypto->changeKey(KEY_AUTH, (unsigned char *) &auth_key[0], auth_key.size());
+#endif        
     }
 
     void run();
