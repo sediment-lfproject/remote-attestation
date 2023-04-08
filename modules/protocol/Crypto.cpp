@@ -488,38 +488,6 @@ int Crypto::decrypt(const unsigned char *key, int key_size,
     return encrypted_size;
 }
 
-bool Crypto::changeKey(KeyPurpose keyPurpose, unsigned char *new_key, int key_size)
-{
-    char *old_key    = NULL;
-    int old_key_size = 0;
-
-    switch (keyPurpose) {
-    case KEY_ENCRYPTION:
-        old_key      = encKey;
-        old_key_size = ENC_KEY_BYTES;
-        break;
-    case KEY_ATTESTATION:
-        old_key      = attestKey;
-        old_key_size = ATTEST_KEY_BYTES;
-        break;
-    case KEY_AUTH:
-        old_key      = authKey;
-        old_key_size = AUTH_KEY_BYTES;
-        break;
-    default:
-        SD_LOG(LOG_ERR, "Crypto::changeKey - unsupported key purpose: %s", TO_KEY_PURPOSE(keyPurpose).c_str());
-        break;
-    }
-    if (old_key == NULL || old_key_size != key_size) {
-        SD_LOG(LOG_ERR, "Crypto::changeKey - bad key purpose or or unmatched key size: %d v.s. %d",
-          old_key_size, key_size);
-        return false;
-    }
-    memcpy(old_key, new_key, key_size);
-
-    return true;
-}
-
 int Crypto::checksum(KeyPurpose keyPurpose, Block *blocks, int block_count, uint8_t *digest, int digest_size)
 {
     const unsigned char *key = (const unsigned char *) getKey(keyPurpose);
@@ -589,73 +557,6 @@ int Crypto::sha256(const unsigned char *input, int input_size, unsigned char *ou
 }
 
 #endif // PLATFORM_NRF9160
-
-char * Crypto::getKey(KeyPurpose keyPurpose)
-{
-    switch (keyPurpose) {
-    case KEY_ENCRYPTION:
-        return encKey;
-
-    case KEY_ATTESTATION:
-        return attestKey;
-
-    case KEY_AUTH:
-        return authKey;
-
-    default:
-        return NULL;
-    }
-}
-
-int Crypto::getKeySize(KeyPurpose keyPurpose)
-{
-    switch (keyPurpose) {
-    case KEY_ENCRYPTION:
-        return ENC_KEY_SIZE;
-
-    case KEY_ATTESTATION:
-        return ATTEST_KEY_SIZE;
-
-    case KEY_AUTH:
-        return AUTH_KEY_SIZE;
-
-    default:
-        return 0;
-    }
-}
-
-void Crypto::calDigest(AuthToken &authToken, uint8_t *serialized, uint32_t len, int offset)
-{
-    vector<uint8_t> &digest = authToken.getDigest();
-
-    digest.resize(DATA_CHECKSUM_BYTES);
-
-    Block blocks[] = {
-        { .block = (const uint8_t *) serialized + offset, .size = (int) len - offset },
-    };
-
-    checksum(KEY_AUTH, blocks, sizeof(blocks) / sizeof(Block), &digest[0], DATA_CHECKSUM_BYTES);
-}
-
-bool Crypto::authenticate(AuthToken &authToken, uint8_t *serialized, uint32_t len, int offset)
-{
-    vector<uint8_t> &digest = authToken.getDigest();
-
-    uint8_t saved[digest.size()];
-
-    memcpy((char *) saved, (char *) &digest[0], digest.size());
-
-    calDigest(authToken, serialized, len, offset);
-
-    if (memcmp((char *) &digest[0], saved, digest.size()) == 0) {
-        return true;
-    }
-    else {
-        SD_LOG(LOG_ERR, "message not authenticated");
-        SD_LOG(LOG_DEBUG, "expected digest %s", Log::toHex((char *) saved, digest.size()).c_str());
-        return false;
-    }
-}
 
 void Crypto::getRandomBytes(void *dst, size_t len)
 {
