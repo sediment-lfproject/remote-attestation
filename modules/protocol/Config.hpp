@@ -67,6 +67,7 @@ public:
     void print_usage(char *cmd);
     bool parseTopLevel(bool isProver, string &key, string &value);
     void parseFile(const string &filename);
+    void attest(const string &filename);
     void update(string &lines);
 
     static KeyEncType toKeyEncType(string method);

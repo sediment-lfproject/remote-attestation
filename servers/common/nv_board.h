@@ -15,9 +15,13 @@
 extern "C" {
 #endif
 
-#define NV_FLASH_OFFSET 0 //
+#define NV_FLASH_OFFSET 0
+#define NV_RSA_OFFSET   0
+#define NV_RSA2_OFFSET  0
+#define NV_RA_OFFSET    0
 #define NV_PAGE_SIZE    0
 #define NV_BLOCK_SIZE   1
+#define NV_SPLIT_PAGES  0
 
 #define CODE_START_ADDR 0x00000000
 
