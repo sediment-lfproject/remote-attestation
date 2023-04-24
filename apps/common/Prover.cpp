@@ -508,6 +508,10 @@ Message * Prover::prepareEvidence(Message *received)
             itemOk = preapreEvidenceBootTime(challenge, &items[count]);
             count++;
             break;
+        case EVIDENCE_CONFIGS:
+            itemOk = prepareEvidenceConfigs(challenge, &items[count], &elapsed, &optional);
+            count++;       
+            break;
         case EVIDENCE_UDF_LIB:
             itemOk = prepareEvidenceFullFirmware(challenge, &items[count], &elapsed, &optional, true);
             count++;
@@ -929,6 +933,41 @@ bool Prover::prepareEvidenceFullFirmware(Challenge *challenge, EvidenceItem *ite
     evidence.inc(Crypto::FW_DIGEST_LEN);
 
     item->setType(isUDF ? EVIDENCE_UDF_LIB : EVIDENCE_FULL_FIRMWARE);
+    item->setEncoding(ENCODING_HMAC_SHA256);
+
+    return true;
+}
+
+bool Prover::prepareEvidenceConfigs(Challenge *challenge, EvidenceItem *item, uint32_t *elapsed, int *optional)
+{
+    vector<uint8_t> &nonce = challenge->getNonce();
+
+    uint32_t blockSize;
+    const uint8_t *starting = (const uint8_t *) board->getConfigBlocks((int *)&blockSize);
+
+    SD_LOG(LOG_INFO, "attest configs starting address: %0x", starting);
+
+    Block blocks[] = {
+        { .block = &nonce[0], .size  = (int) nonce.size() },
+        { .block = starting,  .size  = (int) blockSize    }
+    };
+    *optional = nonce.size() + blockSize;
+
+    Vector &evidence = item->getEvidence();
+    evidence.resize(Crypto::FW_DIGEST_LEN);
+
+    Crypto *crypto = seec.getCrypto();
+    if (crypto == NULL) {
+        SD_LOG(LOG_ERR, "null crypto");
+        return false;
+    }
+
+    uint64_t start_time = board->getTimeInstant();
+    crypto->checksum(KEY_ATTESTATION, blocks, sizeof(blocks) / sizeof(Block), evidence.at(0), Crypto::FW_DIGEST_LEN);
+    *elapsed = board->getElapsedTime(start_time);
+    evidence.inc(Crypto::FW_DIGEST_LEN);
+
+    item->setType(EVIDENCE_CONFIGS);
     item->setEncoding(ENCODING_HMAC_SHA256);
 
     return true;

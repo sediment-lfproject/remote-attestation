@@ -296,6 +296,5 @@ uint32_t BoardRPI::getAttestSqn()
 char *gatherConfigBlocks(const string &filename, int *len);
 char* BoardRPI::getConfigBlocks(int *len) 
 {
-    char *ptr = gatherConfigBlocks("/home/tchen/sediment/configs/boards/Ubuntu-001", len);
-    return NULL;
+    return gatherConfigBlocks("/home/tchen/sediment/configs/boards/Ubuntu-001", len);
 }

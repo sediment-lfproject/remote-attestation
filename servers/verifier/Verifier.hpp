@@ -38,6 +38,7 @@ protected:
     bool verifyFullFirmware(EvidenceItem *item, Device *device, EvidenceType type);
     bool verifyOsVersion(EvidenceItem *item, Device *device);
     bool verifyBootTime(EvidenceItem *item, Device *device);
+    bool verifyConfigs(EvidenceItem *item, Device *device, EvidenceType type);
     bool verifyUDF(EvidenceItem *item, Device *device, EvidenceType type);
 
     string receiveDeviceID(int dev_sock);

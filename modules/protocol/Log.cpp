@@ -278,6 +278,9 @@ string Log::toEvidencetype(EvidenceType evidenceType)
     case EVIDENCE_LOCATION:
         return "LOCATION";
 
+    case EVIDENCE_CONFIGS:
+        return "CONFIGS";        
+
     case EVIDENCE_UDF_LIB:
         return "UDF_LIB";
 

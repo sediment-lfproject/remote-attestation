@@ -224,6 +224,9 @@ Message * Verifier::handleEvidence(Evidence *evidence, EndpointSock *src, Device
             case EVIDENCE_BOOT_TIME:
                 verified &= verifyBootTime(&items[i], device);
                 break;
+            case EVIDENCE_CONFIGS:
+                verified &= verifyConfigs(&items[i], device, type);
+                break;
             case EVIDENCE_UDF1:
             case EVIDENCE_UDF2:
             case EVIDENCE_UDF3:
@@ -379,6 +382,63 @@ bool Verifier::verifyFullFirmware(EvidenceItem *item, Device *device, EvidenceTy
         return false;
     }
     close(fd);
+    SD_LOG(LOG_INFO, "%s checksum is correct", Log::toEvidencetype(type).c_str());
+
+    return true;
+}
+
+char *gatherConfigBlocks(const string &filename, int *size);
+bool Verifier::verifyConfigs(EvidenceItem *item, Device *device, EvidenceType type)
+{
+    EvidenceEncoding encoding = item->getEncoding();
+
+    if (encoding != ENCODING_HMAC_SHA256) {
+        SD_LOG(LOG_ERR, "%s envidence must be encoded as HMAC_SHA256", Log::toEvidencetype(type).c_str());
+        return false;
+    }
+    string filename = (type == EVIDENCE_UDF_LIB) ? "lib/sediment_udf.so" : device->getFirmware();
+    filename = "/home/tchen/sediment/configs/boards/Ubuntu-001"; //getSedimentHome() + filename;
+    int fileSize; //    = getFirmwareSize(filename);
+
+    // int fd = open(filename.c_str(), O_RDONLY);
+    // if (fd < 0) {
+    //     SD_LOG(LOG_ERR, "cannot open file: %s", filename.c_str());
+    //     return false;
+    // }
+
+    unsigned char *bufPtr = (unsigned char *) gatherConfigBlocks(filename, &fileSize);
+    if (bufPtr == 0) {
+        SD_LOG(LOG_ERR, "mmap error: %s", filename.c_str());
+        // close(fd);
+        return false;
+    }
+
+    vector<uint8_t> nonce = device->getNonce();
+    Block blocks[]        = {
+        { .block = &nonce[0], .size    = (int) nonce.size() },
+        { .block = bufPtr,    .size    = fileSize           }
+    };
+    uint8_t digest[Crypto::FW_DIGEST_LEN];
+
+    Seec *seec     = device->getSeec();
+    Crypto *crypto = seec->getCrypto();
+    if (crypto == NULL) {
+        SD_LOG(LOG_ERR, "null crypto: %s");
+        // close(fd);
+        return false;
+    }
+    crypto->checksum(KEY_ATTESTATION, blocks, sizeof(blocks) / sizeof(Block), digest, Crypto::FW_DIGEST_LEN);
+
+    Vector &vecEvidence = item->getEvidence();
+    int memcpy_resp     = memcmp((char *) vecEvidence.at(0), digest, vecEvidence.size());
+    if (memcpy_resp != 0) {
+        SD_LOG(LOG_ERR, "%s checksum is incorrect", Log::toEvidencetype(type).c_str());
+        SD_LOG(LOG_INFO, "Expected: %s", Log::toHex((char *) digest, vecEvidence.size()).c_str());
+
+        // close(fd);
+        return false;
+    }
+    // close(fd);
     SD_LOG(LOG_INFO, "%s checksum is correct", Log::toEvidencetype(type).c_str());
 
     return true;
