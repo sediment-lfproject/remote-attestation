@@ -26,6 +26,7 @@ Col cols[] = {
     { COL_ID,               COL_TYPE_TEXT },
     { COL_FIRMWARE,         COL_TYPE_TEXT },
     { COL_FIRMWARE_SIZE,    COL_TYPE_INT  },
+    { COL_CONFIGS,          COL_TYPE_TEXT },
     { COL_OS_VERSION,       COL_TYPE_TEXT },
     { COL_VERIFIER_EP,      COL_TYPE_TEXT },
     { COL_RELYINGPARTY_EP,  COL_TYPE_TEXT },
@@ -94,6 +95,9 @@ Device::Device(nlohmann::basic_json<> value, Config &config) :
         else if (!key.compare(COL_FIRMWARE_SIZE)) {
             firmwareSize = el.value().get<int>();
         }
+        else if (!key.compare(COL_CONFIGS)) {
+            configs = el.value().get<string>();
+        }        
         else if (!key.compare(COL_OS_VERSION)) {
             osVersion = el.value().get<string>();
         }
@@ -211,6 +215,8 @@ int populateDevice(Device *device, sqlite3_stmt *statement)
                 device->setId(value);
             else if (!strcmp(name, COL_FIRMWARE))
                 device->setFirmware(value);
+            else if (!strcmp(name, COL_CONFIGS))
+                device->setConfigs(value);                
             else if (!strcmp(name, COL_OS_VERSION))
                 device->setOsVersion(value);
             else if (!strcmp(name, COL_VERIFIER_EP)) {
@@ -351,6 +357,7 @@ void Device::createDeviceTable()
       COL_ID               " TEXT PRIMARY KEY     NOT NULL, "
       COL_FIRMWARE         " TEXT NOT NULL, "
       COL_FIRMWARE_SIZE    " INT  NOT NULL, "
+      COL_CONFIGS          " TEXT NOT NULL, "
       COL_OS_VERSION       " TEXT NOT NULL, "
       COL_VERIFIER_EP      " TEXT  NOT NULL, "
       COL_RELYINGPARTY_EP  " TEXT  NOT NULL, "
@@ -393,6 +400,7 @@ string Device::toString()
     return "'" + id + "', "
            + "'" + firmware + "', "
            + to_string(firmwareSize) + ", "
+           + "'" + configs + "', "
            + "'" + osVersion + "', '"
            + verifierEndpoint.toStringOneline() + "', '"
            + relyingPartyEndpoint.toStringOneline() + "', '"
