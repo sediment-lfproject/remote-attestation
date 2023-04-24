@@ -74,7 +74,7 @@ static Item flash_items[] = {
 
 std::vector<int> vec;
 
-void dump(const uint8_t *data, size_t size, int num_items)
+void dump(const uint8_t *data, int num_items)
 {
     int offset = 0;
     for (int i = 0; i < num_items; i++)
@@ -149,6 +149,17 @@ bool isMultiline(string key)
            key.compare(NV_TIMEPATH));
 }
 
+bool isNotInterested(string key)
+{
+    return !(key.compare(NV_ENCRYPTKEY) &&
+           key.compare(NV_ENCRYPTKEY_SIZE) &&
+           key.compare(NV_FW_SCRIPT) &&
+           key.compare(NV_LOG_LEVEL) &&
+           key.compare(NV_LOG_LEVEL) &&
+           key.compare(NV_DATA_TRANSPORT) &&
+           key.compare(NV_DOWNLOAD));
+}
+
 char *gatherConfigBlocks(const string &filename, int *size)
 {
     if (!exists(filename)) {
@@ -172,7 +183,7 @@ char *gatherConfigBlocks(const string &filename, int *size)
         }
     }
     *size = total;
-    std::cout << " Total Siz = " << *size << std::endl;
+    // std::cout << " Total Siz = " << *size << std::endl;
 
     char *pool = (char *) calloc(1, total);
 
@@ -197,7 +208,8 @@ char *gatherConfigBlocks(const string &filename, int *size)
                 break;
         }
         if (i == num_items) {
-            SD_LOG(LOG_ERR, "not found: %s", key.c_str());
+            if (!isNotInterested(key))
+                SD_LOG(LOG_ERR, "not found: %s", key.c_str());
             continue;
             // break;
         }
@@ -247,7 +259,7 @@ char *gatherConfigBlocks(const string &filename, int *size)
             extra = 0;
     }
     // dump_hex_ascii((const uint8_t *)pool, total);
-    dump((const uint8_t *)pool, total, num_items);
+    // dump((const uint8_t *)pool, total, num_items);
 
     return pool;
 }
