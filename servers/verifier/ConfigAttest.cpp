@@ -110,10 +110,6 @@ void dump_hex_ascii(const uint8_t *data, size_t size)
 	printf("0  1  2  3  4  5  6  7   8  9  A  B  C  D  E  F\n");
 
 	for (i = 0; i < size; ++i) {
-        if (std::find(vec.begin(), vec.end(), i) != vec.end()) {
-            printf("\n");
-        }
-
 		printf("%02X ", ((unsigned char *)data)[i]);
 
 		ascii[i % 16] = isprint(data[i]) ? data[i] : '.';
@@ -155,7 +151,6 @@ bool isNotInterested(string key)
            key.compare(NV_ENCRYPTKEY_SIZE) &&
            key.compare(NV_FW_SCRIPT) &&
            key.compare(NV_LOG_LEVEL) &&
-           key.compare(NV_LOG_LEVEL) &&
            key.compare(NV_DATA_TRANSPORT) &&
            key.compare(NV_DOWNLOAD));
 }
@@ -186,6 +181,10 @@ char *gatherConfigBlocks(const string &filename, int *size)
     // std::cout << " Total Siz = " << *size << std::endl;
 
     char *pool = (char *) calloc(1, total);
+    pool[0] = 0x0a;
+    pool[1] = 0xce;
+    pool[2] = 0xbe;
+    pool[3] = 0xef;
 
     int i = 0;
     int extra = 0;
@@ -258,8 +257,8 @@ char *gatherConfigBlocks(const string &filename, int *size)
         else
             extra = 0;
     }
-    // dump_hex_ascii((const uint8_t *)pool, total);
-    // dump((const uint8_t *)pool, total, num_items);
+    dump((const uint8_t *)pool, num_items);
+    dump_hex_ascii((const uint8_t *)pool, total);
 
     return pool;
 }

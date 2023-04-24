@@ -94,3 +94,175 @@ uint32_t BoardZephyr::getAttestSqn()
 {
     return getAttestSqnNV();
 }
+
+static Item flash_items[] = {
+    { NV_MAGIC,            NV_OFFSET_MAGIC,            NV_LEN_MAGIC,            NV_TYPE_BYTE                },
+    { NV_ID,               NV_OFFSET_ID,               NV_LEN_ID,               NV_TYPE_CHAR                },
+    { NV_PROTOCOL,         NV_OFFSET_PROTOCOL,         NV_LEN_PROTOCOL,         NV_TYPE_CHAR                },
+    { NV_ADDRESS,          NV_OFFSET_ADDRESS,          NV_LEN_ADDRESS,          NV_TYPE_CHAR                },
+    { NV_PORT,             NV_OFFSET_PORT,             NV_LEN_PORT,             NV_TYPE_INT                 },
+    { NV_KEY_DIST,         NV_OFFSET_KEY_DIST,         NV_LEN_KEY_DIST,         NV_TYPE_CHAR                },
+    { NV_KEY_CHG_INTVL,    NV_OFFSET_KEY_CHG_INTVL,    NV_LEN_KEY_CHG_INTVL,    NV_TYPE_INT                 },
+    { NV_ENCRYPT,          NV_OFFSET_ENCRYPT,          NV_LEN_ENCRYPT,          NV_TYPE_BOOL                },
+    { NV_REPORT_INTVL,     NV_OFFSET_REPORT_INTVL,     NV_LEN_REPORT_INTVL,     NV_TYPE_INT                 },
+    { NV_ATTEST,           NV_OFFSET_ATTEST,           NV_LEN_ATTEST,           NV_TYPE_BOOL                },
+    { NV_SEEC,             NV_OFFSET_SEEC,             NV_LEN_SEEC,             NV_TYPE_BOOL                },
+    { NV_KEY_ENCRYPTION,   NV_OFFSET_KEY_ENCRYPTION,   NV_LEN_KEY_ENCRYPTION,   NV_TYPE_BOOL                },
+    { NV_SIGNING,          NV_OFFSET_SIGNING,          NV_LEN_SIGNING,          NV_TYPE_BOOL                },
+    { NV_KEY_CHANGE,       NV_OFFSET_KEY_CHANGE,       NV_LEN_KEY_CHANGE,       NV_TYPE_BOOL                },
+    { NV_PASSPORT_PERIOD,  NV_OFFSET_PASSPORT_PERIOD,  NV_LEN_PASSPORT_PERIOD,  NV_TYPE_INT                 },
+    { NV_PAYLOAD_SIZE,     NV_OFFSET_PAYLOAD_SIZE,     NV_LEN_PAYLOAD_SIZE,     NV_TYPE_INT                 },
+    { NV_PASS_THRU,        NV_OFFSET_PASS_THRU,        NV_LEN_PASS_THRU,        NV_TYPE_BOOL                },
+    { NV_NUM_CYCLES,       NV_OFFSET_NUM_CYCLES,       NV_LEN_NUM_CYCLES,       NV_TYPE_INT                 },
+    { NV_ITERATIONS,       NV_OFFSET_ITERATIONS,       NV_LEN_ITERATIONS,       NV_TYPE_INT                 },
+    { NV_AUTHENTICATION,   NV_OFFSET_AUTHENTICATION,   NV_LEN_AUTHENTICATION,   NV_TYPE_BOOL                },
+
+    { NV_ENC_KEY,          NV_OFFSET_ENC_KEY,          NV_LEN_ENC_KEY,          NV_TYPE_BYTE                },
+    { NV_ATTEST_KEY,       NV_OFFSET_ATTEST_KEY,       NV_LEN_ATTEST_KEY,       NV_TYPE_BYTE                },
+    { NV_AUTH_KEY,         NV_OFFSET_AUTH_KEY,         NV_LEN_AUTH_KEY,         NV_TYPE_BYTE                },
+    { NV_ATTEST_SQN,       NV_OFFSET_ATTEST_SQN,       NV_LEN_ATTEST_SQN,       NV_TYPE_INT                 },
+
+    { NV_PARAMS_SIZE,      NV_OFFSET_PARAMS_SIZE,      NV_LEN_PARAMS_SIZE,      NV_TYPE_INT                 },
+    { NV_PARAMS,           NV_OFFSET_PARAMS,           NV_LEN_PARAMS,           NV_TYPE_BLOCK               },
+
+    { NV_URIPATH_SIZE,     NV_OFFSET_URIPATH_SIZE,     NV_LEN_URIPATH_SIZE,     NV_TYPE_INT                 },
+    { NV_URIPATH,          NV_OFFSET_URIPATH,          NV_LEN_URIPATH,          NV_TYPE_BLOCK               },
+
+    { NV_TIMEPATH_SIZE,    NV_OFFSET_TIMEPATH_SIZE,    NV_LEN_TIMEPATH_SIZE,    NV_TYPE_INT                 },
+    { NV_TIMEPATH,         NV_OFFSET_TIMEPATH,         NV_LEN_TIMEPATH,         NV_TYPE_BLOCK               },
+
+    { NV_SIGNKEY_SIZE,     NV_OFFSET_SIGNKEY_SIZE,     NV_LEN_SIGNKEY_SIZE,     NV_TYPE_INT                 },
+    { NV_SIGNKEY,          NV_OFFSET_SIGNKEY,          NV_LEN_SIGNKEY,          NV_TYPE_BLOCK               },
+};
+
+void dump_hex_ascii(const uint8_t *data, size_t size)
+{
+	char ascii[17];
+	size_t i, j;
+
+	ascii[16] = '\0';
+
+	printk("\n");
+	printk("0  1  2  3  4  5  6  7   8  9  A  B  C  D  E  F\n");
+
+	for (i = 0; i < size; ++i) {
+		printk("%02X ", ((unsigned char *)data)[i]);
+
+		ascii[i % 16] = isprint(data[i]) ? data[i] : '.';
+
+		if ((i + 1) % 8 == 0 || i + 1 == size) {
+			printk(" ");
+			if ((i + 1) % 16 == 0) {
+				printk("|  %s\n", ascii);
+			} else if ((i + 1) == size) {
+				ascii[(i + 1) % 16] = '\0';
+
+				if ((i + 1) % 16 <= 8) {
+					printk(" ");
+				}
+
+				for (j = (i + 1) % 16; j < 16; ++j) {
+					printk("   ");
+				}
+				printk("|  %s\n", ascii);
+			}
+		}
+	}
+
+	printk("\n");
+}
+
+void dump(const uint8_t *data, int num_items)
+{
+    int offset = 0;
+    for (int i = 0; i < num_items; i++)
+    {
+        int start = offset;
+        int end = offset + flash_items[i].len;
+        
+        printk("%s ", flash_items[i].name);
+        for (int j = start; j < end; j++) 
+        {
+            printk("%c", isprint(data[j]) ? data[j] : '.');
+        }
+        printk("\n");
+
+        for (int j = start; j < end; j++) 
+        {
+            printk("%02x", data[j]);
+        }
+        printk("\n\n");
+
+        offset += flash_items[i].len;
+    }
+}
+
+bool isVariableLen(string key)
+{
+    return !(key.compare(NV_PARAMS) &&
+             key.compare(NV_SIGNKEY) &&
+             key.compare(NV_URIPATH) &&
+             key.compare(NV_TIMEPATH));
+}
+
+bool isVariableLenSize(string key)
+{
+    return !(key.compare(NV_PARAMS_SIZE) &&
+             key.compare(NV_URIPATH_SIZE) &&
+             key.compare(NV_TIMEPATH_SIZE) &&
+             key.compare(NV_SIGNKEY_SIZE));
+}
+
+
+char* BoardZephyr::getConfigBlocks(int *size) 
+{
+    int total = 0;
+    int num_items = 0;
+    int i = 0;
+
+    while (true)
+    {
+        total += flash_items[i].len;
+        num_items++;
+
+        if (!strcmp(flash_items[i].name, NV_SIGNKEY)) {
+            break;
+        } 
+        i++;
+    }
+    *size = total;
+
+    char *pool = (char *) calloc(1, total);
+int read_item(const char *item_name, int buf_len, uint8_t *buf);
+
+    int offset = 0;
+    int var_len = 0;
+    for (int i = 0; i < num_items; i++)
+    {
+        Item *item = &flash_items[i];
+        if (strcmp(item->name, NV_ATTEST_SQN)) {
+            if (item->type == NV_TYPE_BOOL) {
+                uint8_t xbuf[item->len];
+                read_item(item->name, item->len, xbuf);
+                pool[offset] = (xbuf[0] == 0) ? 0 : 1;
+            }
+            else if (isVariableLen(item->name)) 
+            {
+                read_item(item->name, item->len, (uint8_t *) (pool + offset));
+                memset(pool + offset + var_len, '\0', item->len - var_len);
+            }
+            else {
+                read_item(item->name, item->len, (uint8_t *) (pool + offset));
+            }
+
+            if (isVariableLenSize(item->name)) 
+            {
+                var_len = *(int *)&pool[offset];
+            }
+        }
+        offset += item->len;
+    }
+    dump((const uint8_t *)pool, num_items);
+    dump_hex_ascii((const uint8_t *)pool, total);
+    return pool;
+}
