@@ -72,7 +72,32 @@ static Item flash_items[] = {
     { NV_LOG_LEVEL,        NV_OFFSET_LOG_LEVEL,        NV_LEN_LOG_LEVEL,        NV_TYPE_INT                 },
 };
 
-#define printk printf
+std::vector<int> vec;
+
+void dump(const uint8_t *data, size_t size, int num_items)
+{
+    int offset = 0;
+    for (int i = 0; i < num_items; i++)
+    {
+        int start = offset;
+        int end = offset + flash_items[i].len;
+        
+        printf("%s ", flash_items[i].name);
+        for (int j = start; j < end; j++) 
+        {
+            printf("%c", isprint(data[j]) ? data[j] : '.');
+        }
+        printf("\n");
+
+        for (int j = start; j < end; j++) 
+        {
+            printf("%02x", data[j]);
+        }
+        printf("\n\n");
+
+        offset += flash_items[i].len;
+    }
+}
 
 void dump_hex_ascii(const uint8_t *data, size_t size)
 {
@@ -81,34 +106,38 @@ void dump_hex_ascii(const uint8_t *data, size_t size)
 
 	ascii[16] = '\0';
 
-	printk("\n");
-	printk("0  1  2  3  4  5  6  7   8  9  A  B  C  D  E  F\n");
+	printf("\n");
+	printf("0  1  2  3  4  5  6  7   8  9  A  B  C  D  E  F\n");
 
 	for (i = 0; i < size; ++i) {
-		printk("%02X ", ((unsigned char *)data)[i]);
+        if (std::find(vec.begin(), vec.end(), i) != vec.end()) {
+            printf("\n");
+        }
+
+		printf("%02X ", ((unsigned char *)data)[i]);
 
 		ascii[i % 16] = isprint(data[i]) ? data[i] : '.';
 
 		if ((i + 1) % 8 == 0 || i + 1 == size) {
-			printk(" ");
+			printf(" ");
 			if ((i + 1) % 16 == 0) {
-				printk("|  %s\n", ascii);
+				printf("|  %s\n", ascii);
 			} else if ((i + 1) == size) {
 				ascii[(i + 1) % 16] = '\0';
 
 				if ((i + 1) % 16 <= 8) {
-					printk(" ");
+					printf(" ");
 				}
 
 				for (j = (i + 1) % 16; j < 16; ++j) {
-					printk("   ");
+					printf("   ");
 				}
-				printk("|  %s\n", ascii);
+				printf("|  %s\n", ascii);
 			}
 		}
 	}
 
-	printk("\n");
+	printf("\n");
 }
 
 bool isMultiline(string key)
@@ -120,7 +149,7 @@ bool isMultiline(string key)
            key.compare(NV_TIMEPATH));
 }
 
-void Config::attest(const string &filename)
+char *gatherConfigBlocks(const string &filename, int *size)
 {
     if (!exists(filename)) {
         SD_LOG(LOG_ERR, "file not exists: '%s'", filename.c_str());
@@ -132,12 +161,18 @@ void Config::attest(const string &filename)
     string line, key, value;
 
     int total = 0;
-    int num_items = sizeof(flash_items) / sizeof(Item);
-    for (int i = 0; i < num_items; i++)
+    int total_items = sizeof(flash_items) / sizeof(Item);
+    int num_items = total_items;
+    for (int i = 0; i < total_items; i++)
     {
         total += flash_items[i].len;
+        if (!strcmp(flash_items[i].name, NV_SIGNKEY)) {
+            num_items = i + 1;
+            break;
+        }
     }
-    std::cout << " Total Siz = " << total << std::endl;
+    *size = total;
+    std::cout << " Total Siz = " << *size << std::endl;
 
     char *pool = (char *) calloc(1, total);
 
@@ -166,6 +201,7 @@ void Config::attest(const string &filename)
             continue;
             // break;
         }
+        vec.push_back(offset);
         // printf("%20s %s %d %d\n", key.c_str(), value.c_str(), flash_items[i].len, offset);
 
         Item *item = &flash_items[i];
@@ -210,5 +246,8 @@ void Config::attest(const string &filename)
         else
             extra = 0;
     }
-    dump_hex_ascii((const uint8_t *)pool, total);
+    // dump_hex_ascii((const uint8_t *)pool, total);
+    dump((const uint8_t *)pool, total, num_items);
+
+    return pool;
 }
