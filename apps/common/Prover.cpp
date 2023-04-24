@@ -497,7 +497,7 @@ Message * Prover::prepareEvidence(Message *received)
             MIN_EVEIDENCE_TYPE, MAX_EVIDENCE_TYPE, "BAD_EVDIENCE_TYPE");
         switch (type) {
         case EVIDENCE_FULL_FIRMWARE:
-            itemOk = prepareEvidenceFullFirmware(challenge, &items[count], &elapsed, &optional, false);
+            itemOk = prepareEvidenceFullFirmware(challenge, &items[count], &elapsed, &optional);
             count++;
             break;
         case EVIDENCE_OS_VERSION:
@@ -513,7 +513,7 @@ Message * Prover::prepareEvidence(Message *received)
             count++;       
             break;
         case EVIDENCE_UDF_LIB:
-            itemOk = prepareEvidenceFullFirmware(challenge, &items[count], &elapsed, &optional, true);
+            itemOk = prepareEvidenceUDF(challenge, &items[count], &elapsed, &optional);
             count++;
             break;
         case EVIDENCE_UDF1:
@@ -895,57 +895,43 @@ void Prover::restartAttestionRequest()
     moveTo(ATTESTATION_REQUEST, NULL);
 }
 
-bool Prover::prepareEvidenceFullFirmware(Challenge *challenge, EvidenceItem *item, uint32_t *elapsed, int *optional,
-  bool isUDF)
+bool Prover::prepareEvidenceFullFirmware(Challenge *challenge, EvidenceItem *item, uint32_t *elapsed, int *optional)
 {
-    vector<uint8_t> &nonce = challenge->getNonce();
-
     uint32_t blockSize      = challenge->getBlockSize();
-
-#ifdef PLATFORM_RPI    
-    string library = sediment_home + "lib/sediment_udf.so";
-#else
-    string library = "ERROR lib";
-#endif
-    string lib              = isUDF ? library : "sediment";
+    string lib              = "sediment";
     const uint8_t *starting = (const uint8_t *) board->getStartingAddr(lib, &blockSize);
 
     SD_LOG(LOG_INFO, "attest firmware starting address: %0x", starting);
 
-    Block blocks[] = {
-        { .block = &nonce[0], .size  = (int) nonce.size() },
-        { .block = starting,  .size  = (int) blockSize    }
-    };
-    *optional = nonce.size() + blockSize;
+    return prepareEvidenceHashing(challenge, item, elapsed, optional, EVIDENCE_FULL_FIRMWARE, starting, blockSize);
+}
 
-    Vector &evidence = item->getEvidence();
-    evidence.resize(Crypto::FW_DIGEST_LEN);
+bool Prover::prepareEvidenceUDF(Challenge *challenge, EvidenceItem *item, uint32_t *elapsed, int *optional)
+{
+    uint32_t blockSize      = challenge->getBlockSize();
+    string lib              = sediment_home + "lib/sediment_udf.so";
+    const uint8_t *starting = (const uint8_t *) board->getStartingAddr(lib, &blockSize);
 
-    Crypto *crypto = seec.getCrypto();
-    if (crypto == NULL) {
-        SD_LOG(LOG_ERR, "null crypto");
-        return false;
-    }
+    SD_LOG(LOG_INFO, "attest firmware starting address: %0x", starting);
 
-    uint64_t start_time = board->getTimeInstant();
-    crypto->checksum(KEY_ATTESTATION, blocks, sizeof(blocks) / sizeof(Block), evidence.at(0), Crypto::FW_DIGEST_LEN);
-    *elapsed = board->getElapsedTime(start_time);
-    evidence.inc(Crypto::FW_DIGEST_LEN);
-
-    item->setType(isUDF ? EVIDENCE_UDF_LIB : EVIDENCE_FULL_FIRMWARE);
-    item->setEncoding(ENCODING_HMAC_SHA256);
-
-    return true;
+    return prepareEvidenceHashing(challenge, item, elapsed, optional, EVIDENCE_UDF_LIB, starting, blockSize);
 }
 
 bool Prover::prepareEvidenceConfigs(Challenge *challenge, EvidenceItem *item, uint32_t *elapsed, int *optional)
 {
-    vector<uint8_t> &nonce = challenge->getNonce();
-
     uint32_t blockSize;
-    const uint8_t *starting = (const uint8_t *) board->getConfigBlocks((int *)&blockSize);
+    char *starting = board->getConfigBlocks((int *)&blockSize);
 
-    SD_LOG(LOG_INFO, "attest configs starting address: %0x", starting);
+    bool val = prepareEvidenceHashing(challenge, item, elapsed, optional, EVIDENCE_CONFIGS, (const uint8_t *)starting, blockSize);
+    free(starting);
+
+    return val;
+}
+
+bool Prover::prepareEvidenceHashing(Challenge *challenge, EvidenceItem *item, uint32_t *elapsed, 
+    int *optional, EvidenceType evidenceType, const uint8_t *starting, uint32_t blockSize)
+{
+    vector<uint8_t> &nonce = challenge->getNonce();
 
     Block blocks[] = {
         { .block = &nonce[0], .size  = (int) nonce.size() },
@@ -967,10 +953,10 @@ bool Prover::prepareEvidenceConfigs(Challenge *challenge, EvidenceItem *item, ui
     *elapsed = board->getElapsedTime(start_time);
     evidence.inc(Crypto::FW_DIGEST_LEN);
 
-    item->setType(EVIDENCE_CONFIGS);
+    item->setType(evidenceType);
     item->setEncoding(ENCODING_HMAC_SHA256);
 
-    return true;
+    return true;    
 }
 
 void Prover::setTimestamp(Message *message)

@@ -61,9 +61,13 @@ protected:
 
     bool preapreEvidenceBootTime(Challenge *challenge, EvidenceItem *item);
     bool preapreEvidenceOsVersion(Challenge *challenge, EvidenceItem *item);
-    bool prepareEvidenceFullFirmware(Challenge *challenge, EvidenceItem *item, uint32_t *elapsed, int *optional, bool isUDF);
+    bool prepareEvidenceFullFirmware(Challenge *challenge, EvidenceItem *item, uint32_t *elapsed, int *optional);
+    bool prepareEvidenceUDF(Challenge *challenge, EvidenceItem *item, uint32_t *elapsed, int *optional);
     bool prepareEvidenceConfigs(Challenge *challenge, EvidenceItem *item, uint32_t *elapsed, int *optional);
     
+    bool prepareEvidenceHashing(Challenge *challenge, EvidenceItem *item, uint32_t *elapsed, 
+                                int *optional, EvidenceType evidenceType, const uint8_t *starting, uint32_t blockSize);
+
 #ifdef PLATFORM_RPI
     string sediment_home;
 
