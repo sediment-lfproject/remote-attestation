@@ -292,3 +292,9 @@ uint32_t BoardRPI::getAttestSqn()
 
     return (uint32_t) atoi(buf);
 }
+
+char *gatherConfigBlocks(const string &filename, int *len);
+char* BoardRPI::getConfigBlocks(int *len) 
+{
+    return gatherConfigBlocks(configFile, len);
+}

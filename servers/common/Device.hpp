@@ -27,6 +27,7 @@ using namespace std;
 #define COL_ID               "id"
 #define COL_FIRMWARE         "firmware"
 #define COL_FIRMWARE_SIZE    "firmwareSize"
+#define COL_CONFIGS          "configs"
 #define COL_OS_VERSION       "osVersion"
 #define COL_VERIFIER_EP      "verifierEndpoint"
 #define COL_RELYINGPARTY_EP  "relyingPartyEndpoint"
@@ -58,6 +59,7 @@ private:
     string id;
     string firmware;
     string osVersion;
+    string configs;
     int firmwareSize = -1; // no longer used
     Endpoint verifierEndpoint;
     Endpoint relyingPartyEndpoint;
@@ -106,6 +108,11 @@ public:
     const string& getFirmware() const
     {
         return firmware;
+    }
+
+    const string& getConfigs() const
+    {
+        return configs;
     }
 
     const string& getOsVersion() const
@@ -215,10 +222,10 @@ public:
         this->firmwareSize = firmwareSize;
     }
 
-    //    void setNonce(Vector nonce) {
-    //        this->nonce = nonce;
-    //    }
-
+    void setConfigs(string configs)
+    {
+        this->configs = configs;
+    }
     void setOsVersion(string osVersion)
     {
         this->osVersion = osVersion;

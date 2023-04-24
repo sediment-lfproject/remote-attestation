@@ -224,6 +224,9 @@ Message * Verifier::handleEvidence(Evidence *evidence, EndpointSock *src, Device
             case EVIDENCE_BOOT_TIME:
                 verified &= verifyBootTime(&items[i], device);
                 break;
+            case EVIDENCE_CONFIGS:
+                verified &= verifyConfigs(&items[i], device, type);
+                break;
             case EVIDENCE_UDF1:
             case EVIDENCE_UDF2:
             case EVIDENCE_UDF3:
@@ -330,12 +333,6 @@ void Verifier::prepareGrant(Grant *grant)
 
 bool Verifier::verifyFullFirmware(EvidenceItem *item, Device *device, EvidenceType type)
 {
-    EvidenceEncoding encoding = item->getEncoding();
-
-    if (encoding != ENCODING_HMAC_SHA256) {
-        SD_LOG(LOG_ERR, "%s envidence must be encoded as HMAC_SHA256", Log::toEvidencetype(type).c_str());
-        return false;
-    }
     string filename = (type == EVIDENCE_UDF_LIB) ? "lib/sediment_udf.so" : device->getFirmware();
     filename = getSedimentHome() + filename;
     int fileSize    = getFirmwareSize(filename);
@@ -352,6 +349,30 @@ bool Verifier::verifyFullFirmware(EvidenceItem *item, Device *device, EvidenceTy
         close(fd);
         return false;
     }
+    return verifyHashing(item, device, type, bufPtr, fileSize, -1);
+}
+
+char *gatherConfigBlocks(const string &filename, int *size);
+bool Verifier::verifyConfigs(EvidenceItem *item, Device *device, EvidenceType type)
+{
+    string filename = getSedimentHome() + device->getConfigs();
+    int fileSize;
+
+    unsigned char *bufPtr = (unsigned char *) gatherConfigBlocks(filename, &fileSize);
+    if (bufPtr == 0) {
+        SD_LOG(LOG_ERR, "config error: %s", filename.c_str());
+        return false;
+    }
+    return verifyHashing(item, device, type, bufPtr, fileSize, -1);
+}
+
+bool Verifier::verifyHashing(EvidenceItem *item, Device *device, EvidenceType type, unsigned char *bufPtr, int fileSize, int fd)
+{
+    EvidenceEncoding encoding = item->getEncoding();
+    if (encoding != ENCODING_HMAC_SHA256) {
+        SD_LOG(LOG_ERR, "%s envidence must be encoded as HMAC_SHA256", Log::toEvidencetype(type).c_str());
+        return false;
+    }
 
     vector<uint8_t> nonce = device->getNonce();
     Block blocks[]        = {
@@ -364,7 +385,8 @@ bool Verifier::verifyFullFirmware(EvidenceItem *item, Device *device, EvidenceTy
     Crypto *crypto = seec->getCrypto();
     if (crypto == NULL) {
         SD_LOG(LOG_ERR, "null crypto: %s");
-        close(fd);
+        if (fd > 0)
+            close(fd);
         return false;
     }
     crypto->checksum(KEY_ATTESTATION, blocks, sizeof(blocks) / sizeof(Block), digest, Crypto::FW_DIGEST_LEN);
@@ -374,11 +396,12 @@ bool Verifier::verifyFullFirmware(EvidenceItem *item, Device *device, EvidenceTy
     if (memcpy_resp != 0) {
         SD_LOG(LOG_ERR, "%s checksum is incorrect", Log::toEvidencetype(type).c_str());
         SD_LOG(LOG_INFO, "Expected: %s", Log::toHex((char *) digest, vecEvidence.size()).c_str());
-
-        close(fd);
+        if (fd > 0)
+            close(fd);
         return false;
     }
-    close(fd);
+    if (fd > 0)
+        close(fd);
     SD_LOG(LOG_INFO, "%s checksum is correct", Log::toEvidencetype(type).c_str());
 
     return true;

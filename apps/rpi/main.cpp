@@ -36,6 +36,8 @@ int main(int argc, char **argv)
     cout << config.toString() << endl;
 
     BoardRPI *board = new BoardRPI(argv[0]);
+    board->setConfigFile(cli.getPublisherConfig());
+    
     Prover prover(config, board);
 #ifdef PLATFORM_RPI
     prover.setSedimentHome(cli.getSedimentHome());

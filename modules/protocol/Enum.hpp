@@ -103,6 +103,7 @@ enum EvidenceType {
     EVIDENCE_BIOS_VERSION         = 4,
     EVIDENCE_BOOT_TIME            = 5,
     EVIDENCE_LOCATION             = 6,
+    EVIDENCE_CONFIGS              = 7,
 
     EVIDENCE_UDF_LIB              = 0x40,
     EVIDENCE_UDF1                 = 0x41,

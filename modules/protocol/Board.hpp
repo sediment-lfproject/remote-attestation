@@ -40,6 +40,12 @@ public:
     virtual uint32_t getHumidity();
     virtual uint32_t getTemperature();
 
+    virtual char *getConfigBlocks(int *len)
+    {
+        (void) len;
+        return NULL;
+    }
+
     virtual void sleepSec(uint32_t sec)
     {
         (void) sec;
