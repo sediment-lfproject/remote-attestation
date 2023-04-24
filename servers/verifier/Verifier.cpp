@@ -355,7 +355,7 @@ bool Verifier::verifyFullFirmware(EvidenceItem *item, Device *device, EvidenceTy
 char *gatherConfigBlocks(const string &filename, int *size);
 bool Verifier::verifyConfigs(EvidenceItem *item, Device *device, EvidenceType type)
 {
-    string filename = "/home/tchen/sediment/configs/boards/Giant_Gecko-001"; //getSedimentHome() + filename;
+    string filename = "/home/tchen/sediment/configs/boards/Giant_Gecko-001";
     int fileSize;
 
     unsigned char *bufPtr = (unsigned char *) gatherConfigBlocks(filename, &fileSize);

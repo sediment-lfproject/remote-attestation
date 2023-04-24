@@ -72,8 +72,6 @@ static Item flash_items[] = {
     { NV_LOG_LEVEL,        NV_OFFSET_LOG_LEVEL,        NV_LEN_LOG_LEVEL,        NV_TYPE_INT                 },
 };
 
-std::vector<int> vec;
-
 void dump(const uint8_t *data, int num_items)
 {
     int offset = 0;
@@ -84,15 +82,11 @@ void dump(const uint8_t *data, int num_items)
         
         printf("%s ", flash_items[i].name);
         for (int j = start; j < end; j++) 
-        {
             printf("%c", isprint(data[j]) ? data[j] : '.');
-        }
         printf("\n");
 
         for (int j = start; j < end; j++) 
-        {
             printf("%02x", data[j]);
-        }
         printf("\n\n");
 
         offset += flash_items[i].len;
@@ -109,31 +103,31 @@ void dump_hex_ascii(const uint8_t *data, size_t size)
 	printf("\n");
 	printf("0  1  2  3  4  5  6  7   8  9  A  B  C  D  E  F\n");
 
-	for (i = 0; i < size; ++i) {
-		printf("%02X ", ((unsigned char *)data)[i]);
+    for (i = 0; i < size; ++i)
+    {
+        printf("%02X ", ((unsigned char *)data)[i]);
 
-		ascii[i % 16] = isprint(data[i]) ? data[i] : '.';
+        ascii[i % 16] = isprint(data[i]) ? data[i] : '.';
 
-		if ((i + 1) % 8 == 0 || i + 1 == size) {
-			printf(" ");
-			if ((i + 1) % 16 == 0) {
-				printf("|  %s\n", ascii);
-			} else if ((i + 1) == size) {
-				ascii[(i + 1) % 16] = '\0';
+        if ((i + 1) % 8 == 0 || i + 1 == size)
+        {
+            printf(" ");
+            if ((i + 1) % 16 == 0)
+                printf("|  %s\n", ascii);
+            else if ((i + 1) == size)
+            {
+                ascii[(i + 1) % 16] = '\0';
 
-				if ((i + 1) % 16 <= 8) {
-					printf(" ");
-				}
+                if ((i + 1) % 16 <= 8)
+                    printf(" ");
 
-				for (j = (i + 1) % 16; j < 16; ++j) {
-					printf("   ");
-				}
-				printf("|  %s\n", ascii);
-			}
-		}
-	}
-
-	printf("\n");
+                for (j = (i + 1) % 16; j < 16; ++j)
+                    printf("   ");
+                printf("|  %s\n", ascii);
+            }
+        }
+    }
+    printf("\n");
 }
 
 bool isMultiline(string key)
@@ -178,7 +172,6 @@ char *gatherConfigBlocks(const string &filename, int *size)
         }
     }
     *size = total;
-    // std::cout << " Total Siz = " << *size << std::endl;
 
     char *pool = (char *) calloc(1, total);
     pool[0] = 0x0a;
@@ -212,8 +205,6 @@ char *gatherConfigBlocks(const string &filename, int *size)
             continue;
             // break;
         }
-        vec.push_back(offset);
-        // printf("%20s %s %d %d\n", key.c_str(), value.c_str(), flash_items[i].len, offset);
 
         Item *item = &flash_items[i];
         if (item->type == NV_TYPE_CHAR ||
@@ -221,7 +212,7 @@ char *gatherConfigBlocks(const string &filename, int *size)
             strncpy((char *)(pool + offset), (char *)&value[0], value.length());
         }
         else if (item->type == NV_TYPE_BOOL) {
-            pool[offset] = strcmp(value.c_str(), "true") ? 0 : 1;
+            pool[offset] = value.compare("true") ? 0 : 1;
         }
         else if (item->type == NV_TYPE_INT) {
             int ival =  strtoul(value.c_str(), NULL, 10);
@@ -257,8 +248,8 @@ char *gatherConfigBlocks(const string &filename, int *size)
         else
             extra = 0;
     }
-    dump((const uint8_t *)pool, num_items);
-    dump_hex_ascii((const uint8_t *)pool, total);
+    // dump((const uint8_t *)pool, num_items);
+    // dump_hex_ascii((const uint8_t *)pool, total);
 
     return pool;
 }

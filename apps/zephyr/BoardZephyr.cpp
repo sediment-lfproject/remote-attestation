@@ -135,68 +135,6 @@ static Item flash_items[] = {
     { NV_SIGNKEY,          NV_OFFSET_SIGNKEY,          NV_LEN_SIGNKEY,          NV_TYPE_BLOCK               },
 };
 
-void dump_hex_ascii(const uint8_t *data, size_t size)
-{
-	char ascii[17];
-	size_t i, j;
-
-	ascii[16] = '\0';
-
-	printk("\n");
-	printk("0  1  2  3  4  5  6  7   8  9  A  B  C  D  E  F\n");
-
-	for (i = 0; i < size; ++i) {
-		printk("%02X ", ((unsigned char *)data)[i]);
-
-		ascii[i % 16] = isprint(data[i]) ? data[i] : '.';
-
-		if ((i + 1) % 8 == 0 || i + 1 == size) {
-			printk(" ");
-			if ((i + 1) % 16 == 0) {
-				printk("|  %s\n", ascii);
-			} else if ((i + 1) == size) {
-				ascii[(i + 1) % 16] = '\0';
-
-				if ((i + 1) % 16 <= 8) {
-					printk(" ");
-				}
-
-				for (j = (i + 1) % 16; j < 16; ++j) {
-					printk("   ");
-				}
-				printk("|  %s\n", ascii);
-			}
-		}
-	}
-
-	printk("\n");
-}
-
-void dump(const uint8_t *data, int num_items)
-{
-    int offset = 0;
-    for (int i = 0; i < num_items; i++)
-    {
-        int start = offset;
-        int end = offset + flash_items[i].len;
-        
-        printk("%s ", flash_items[i].name);
-        for (int j = start; j < end; j++) 
-        {
-            printk("%c", isprint(data[j]) ? data[j] : '.');
-        }
-        printk("\n");
-
-        for (int j = start; j < end; j++) 
-        {
-            printk("%02x", data[j]);
-        }
-        printk("\n\n");
-
-        offset += flash_items[i].len;
-    }
-}
-
 bool isVariableLen(string key)
 {
     return !(key.compare(NV_PARAMS) &&
@@ -233,14 +171,14 @@ char* BoardZephyr::getConfigBlocks(int *size)
     *size = total;
 
     char *pool = (char *) calloc(1, total);
-int read_item(const char *item_name, int buf_len, uint8_t *buf);
+    int read_item(const char *item_name, int buf_len, uint8_t *buf);
 
     int offset = 0;
     int var_len = 0;
     for (int i = 0; i < num_items; i++)
     {
         Item *item = &flash_items[i];
-        if (strcmp(item->name, NV_ATTEST_SQN)) {
+        if (strcmp(item->name, NV_ATTEST_SQN)) {  // exclude attestation sqn
             if (item->type == NV_TYPE_BOOL) {
                 uint8_t xbuf[item->len];
                 read_item(item->name, item->len, xbuf);
@@ -249,20 +187,20 @@ int read_item(const char *item_name, int buf_len, uint8_t *buf);
             else if (isVariableLen(item->name)) 
             {
                 read_item(item->name, item->len, (uint8_t *) (pool + offset));
-                memset(pool + offset + var_len, '\0', item->len - var_len);
+                memset(pool + offset + var_len, '\0', item->len - var_len);  // zero out trailing unused bytes
             }
             else {
                 read_item(item->name, item->len, (uint8_t *) (pool + offset));
             }
 
-            if (isVariableLenSize(item->name)) 
+            if (isVariableLenSize(item->name)) // save the length of the next item
             {
                 var_len = *(int *)&pool[offset];
             }
         }
         offset += item->len;
     }
-    dump((const uint8_t *)pool, num_items);
-    dump_hex_ascii((const uint8_t *)pool, total);
+    // dump((const uint8_t *)pool, num_items);
+    // dump_hex_ascii((const uint8_t *)pool, total);
     return pool;
 }
