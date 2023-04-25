@@ -293,8 +293,12 @@ uint32_t BoardRPI::getAttestSqn()
     return (uint32_t) atoi(buf);
 }
 
-char *gatherConfigBlocks(const string &filename, int *len);
+/**
+ * allocate a memory block to collect the configurations.
+ * caller is responsible for freeing the buffer.
+*/
 char* BoardRPI::getConfigBlocks(int *len) 
 {
+    char *gatherConfigBlocks(const string &filename, int *len);  // allocation here
     return gatherConfigBlocks(configFile, len);
 }

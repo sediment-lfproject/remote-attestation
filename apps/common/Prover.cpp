@@ -513,8 +513,13 @@ Message * Prover::prepareEvidence(Message *received)
             count++;       
             break;
         case EVIDENCE_UDF_LIB:
-            itemOk = prepareEvidenceUDF(challenge, &items[count], &elapsed, &optional);
+#ifdef PLATFORM_RPI        
+            itemOk = prepareEvidenceUDFLib(challenge, &items[count], &elapsed, &optional);
             count++;
+#else
+            SD_LOG(LOG_ERR, "UDF lib not supported for non-Linux based devices");
+            itemOk = false;
+#endif            
             break;
         case EVIDENCE_UDF1:
         case EVIDENCE_UDF2:
@@ -847,6 +852,17 @@ bool Prover::preapreEvidenceUDF(Challenge *challenge, EvidenceItem *item, Eviden
     return true;
 }
 
+bool Prover::prepareEvidenceUDFLib(Challenge *challenge, EvidenceItem *item, uint32_t *elapsed, int *optional)
+{
+    uint32_t blockSize      = challenge->getBlockSize();
+    string lib              = sediment_home + "lib/sediment_udf.so";
+    const uint8_t *starting = (const uint8_t *) board->getStartingAddr(lib, &blockSize);
+
+    SD_LOG(LOG_INFO, "attest firmware starting address: %0x", starting);
+
+    return prepareEvidenceHashing(challenge, item, elapsed, optional, EVIDENCE_UDF_LIB, starting, blockSize);
+}
+
 #endif // ifdef PLATFORM_RPI
 
 bool Prover::preapreEvidenceOsVersion(Challenge *challenge, EvidenceItem *item)
@@ -906,21 +922,10 @@ bool Prover::prepareEvidenceFullFirmware(Challenge *challenge, EvidenceItem *ite
     return prepareEvidenceHashing(challenge, item, elapsed, optional, EVIDENCE_FULL_FIRMWARE, starting, blockSize);
 }
 
-bool Prover::prepareEvidenceUDF(Challenge *challenge, EvidenceItem *item, uint32_t *elapsed, int *optional)
-{
-    uint32_t blockSize      = challenge->getBlockSize();
-    string lib              = sediment_home + "lib/sediment_udf.so";
-    const uint8_t *starting = (const uint8_t *) board->getStartingAddr(lib, &blockSize);
-
-    SD_LOG(LOG_INFO, "attest firmware starting address: %0x", starting);
-
-    return prepareEvidenceHashing(challenge, item, elapsed, optional, EVIDENCE_UDF_LIB, starting, blockSize);
-}
-
 bool Prover::prepareEvidenceConfigs(Challenge *challenge, EvidenceItem *item, uint32_t *elapsed, int *optional)
 {
     uint32_t blockSize;
-    char *starting = board->getConfigBlocks((int *)&blockSize);
+    char *starting = board->getConfigBlocks((int *)&blockSize);   // memoery allocation
 
     bool val = prepareEvidenceHashing(challenge, item, elapsed, optional, EVIDENCE_CONFIGS, (const uint8_t *)starting, blockSize);
     free(starting);

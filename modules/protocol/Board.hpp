@@ -40,6 +40,10 @@ public:
     virtual uint32_t getHumidity();
     virtual uint32_t getTemperature();
 
+    /**
+     * allocate a memory block to collect the configurations.
+     * caller is responsible for freeing the buffer.
+     */
     virtual char *getConfigBlocks(int *len)
     {
         (void) len;

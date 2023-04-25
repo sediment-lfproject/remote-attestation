@@ -151,7 +151,10 @@ bool isVariableLenSize(string key)
              key.compare(NV_SIGNKEY_SIZE));
 }
 
-
+/**
+ * allocate a memory block to collect the configurations.
+ * caller is responsible for freeing the buffer.
+*/
 char* BoardZephyr::getConfigBlocks(int *size) 
 {
     int total = 0;
@@ -170,7 +173,7 @@ char* BoardZephyr::getConfigBlocks(int *size)
     }
     *size = total;
 
-    char *pool = (char *) calloc(1, total);
+    char *pool = (char *) calloc(1, total);  // allocation here
     int read_item(const char *item_name, int buf_len, uint8_t *buf);
 
     int offset = 0;

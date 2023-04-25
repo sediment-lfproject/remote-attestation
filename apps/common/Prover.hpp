@@ -62,7 +62,6 @@ protected:
     bool preapreEvidenceBootTime(Challenge *challenge, EvidenceItem *item);
     bool preapreEvidenceOsVersion(Challenge *challenge, EvidenceItem *item);
     bool prepareEvidenceFullFirmware(Challenge *challenge, EvidenceItem *item, uint32_t *elapsed, int *optional);
-    bool prepareEvidenceUDF(Challenge *challenge, EvidenceItem *item, uint32_t *elapsed, int *optional);
     bool prepareEvidenceConfigs(Challenge *challenge, EvidenceItem *item, uint32_t *elapsed, int *optional);
     
     bool prepareEvidenceHashing(Challenge *challenge, EvidenceItem *item, uint32_t *elapsed, 
@@ -71,6 +70,7 @@ protected:
 #ifdef PLATFORM_RPI
     string sediment_home;
 
+    bool prepareEvidenceUDFLib(Challenge *challenge, EvidenceItem *item, uint32_t *elapsed, int *optional);
     bool preapreEvidenceUDF(Challenge *challenge, EvidenceItem *item, EvidenceType evidenceType);
 #endif
 
