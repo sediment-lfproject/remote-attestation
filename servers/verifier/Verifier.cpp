@@ -363,7 +363,10 @@ bool Verifier::verifyConfigs(EvidenceItem *item, Device *device, EvidenceType ty
         SD_LOG(LOG_ERR, "config error: %s", filename.c_str());
         return false;
     }
-    return verifyHashing(item, device, type, bufPtr, fileSize, -1);
+    bool val = verifyHashing(item, device, type, bufPtr, fileSize, -1);
+    free(bufPtr);
+
+    return val;
 }
 
 bool Verifier::verifyHashing(EvidenceItem *item, Device *device, EvidenceType type, unsigned char *bufPtr, int fileSize, int fd)

@@ -29,6 +29,7 @@ protected:
     uint32_t rejectCount    = 0; // consecutive times of data being rejected
     uint32_t attestSqn      = 0; // current attestation sequence number
     uint32_t attestRestarts = 0; // amount of restarts from AR
+    uint32_t seecSqn        = 0; // current seec number
 
     Seec seec;
 
@@ -61,12 +62,16 @@ protected:
 
     bool preapreEvidenceBootTime(Challenge *challenge, EvidenceItem *item);
     bool preapreEvidenceOsVersion(Challenge *challenge, EvidenceItem *item);
-    bool prepareEvidenceFullFirmware(Challenge *challenge, EvidenceItem *item, uint32_t *elapsed, int *optional, bool isUDF);
+    bool prepareEvidenceFullFirmware(Challenge *challenge, EvidenceItem *item, uint32_t *elapsed, int *optional);
     bool prepareEvidenceConfigs(Challenge *challenge, EvidenceItem *item, uint32_t *elapsed, int *optional);
     
+    bool prepareEvidenceHashing(Challenge *challenge, EvidenceItem *item, uint32_t *elapsed, 
+                                int *optional, EvidenceType evidenceType, const uint8_t *starting, uint32_t blockSize);
+
 #ifdef PLATFORM_RPI
     string sediment_home;
 
+    bool prepareEvidenceUDFLib(Challenge *challenge, EvidenceItem *item, uint32_t *elapsed, int *optional);
     bool preapreEvidenceUDF(Challenge *challenge, EvidenceItem *item, EvidenceType evidenceType);
 #endif
 

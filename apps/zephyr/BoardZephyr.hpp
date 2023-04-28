@@ -27,5 +27,7 @@ public:
     virtual void * getStartingAddr(string &library_keyword, uint32_t *blockSize);
     virtual void saveAttestSqn(uint32_t sqn);
     virtual uint32_t getAttestSqn();
+    virtual void saveSeecSqn(uint32_t sqn);
+    virtual uint32_t getSeecSqn();    
     virtual char* getConfigBlocks(int *len) ;
 };
