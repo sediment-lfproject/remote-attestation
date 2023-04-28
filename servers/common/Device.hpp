@@ -41,6 +41,7 @@ using namespace std;
 #define COL_LAST_ATTESTATION "lastAttestation"
 #define COL_STATUS           "status"
 #define COL_SQN              "sqn"
+#define COL_SEEC_SQN         "seec_sqn"
 #define COL_EVIDENCE_TYPES   "evidenceTypes"
 
 typedef uint32_t TimeStamp;
@@ -76,6 +77,7 @@ private:
     TimeStamp lastAttestation;
     bool status = false;
     uint32_t sqn;
+    uint32_t seecSqn;    
     vector<uint8_t> evidenceTypes;
 
 public:
@@ -273,6 +275,16 @@ public:
     void setSqn(uint32_t sqn)
     {
         this->sqn = sqn;
+    }
+
+    uint32_t getSeecSqn() const
+    {
+        return seecSqn;
+    }
+
+    void setSeecSqn(uint32_t sqn)
+    {
+        this->seecSqn = sqn;
     }
 
     Endpoint& getProverEndpoint()
