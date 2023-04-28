@@ -220,9 +220,14 @@ extern "C" {
 #define NV_OFFSET_RSA_VERIFY      (NV_OFFSET_RSA_VERIFY_SIZE + NV_LEN_RSA_VERIFY_SIZE)
 
 // Remote Attestation page
-#define NV_ATTEST_SQN        "attest_sqn"
-#define NV_LEN_ATTEST_SQN    4
-#define NV_OFFSET_ATTEST_SQN (NV_RA_OFFSET)
+#define NV_ATTEST_SQN             "attest_sqn"
+#define NV_LEN_ATTEST_SQN         4
+#define NV_OFFSET_ATTEST_SQN      (NV_RA_OFFSET)
+
+// SEEC page
+#define NV_SEEC_SQN               "seec_sqn"
+#define NV_LEN_SEEC_SQN           4
+#define NV_OFFSET_SEEC_SQN        (NV_SEEC_OFFSET)
 
 typedef struct _item {
     char     name[32];

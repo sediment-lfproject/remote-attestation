@@ -29,6 +29,7 @@ protected:
     uint32_t rejectCount    = 0; // consecutive times of data being rejected
     uint32_t attestSqn      = 0; // current attestation sequence number
     uint32_t attestRestarts = 0; // amount of restarts from AR
+    uint32_t seecSqn        = 0; // current seec number
 
     Seec seec;
 

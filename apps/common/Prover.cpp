@@ -39,6 +39,7 @@ static bool attested_once = false;
 void Prover::run()
 {
     attestSqn = board->getAttestSqn();
+    seecSqn = board->getSeecSqn();
 
     if (config.getTransport() == TRANSPORT_SEDIMENT_MQTT) {
         string url = endpoint.getAddress();
@@ -659,7 +660,8 @@ Message * Prover::prepareData(Message *received)
     temp  = board->getTemperature();
     humid = board->getHumidity();
 
-    board->incSeq();
+    seecSqn++;
+    board->saveSeecSqn(seecSqn);
 
     Crypto *crypto = seec.getCrypto();
     if (crypto == NULL) {
@@ -670,7 +672,7 @@ Message * Prover::prepareData(Message *received)
     const int message_size = config.getPayloadSize();
     char message[message_size];
     memset(message, '_', message_size); // pad the buffer
-    int n = snprintf(message, message_size, "%d,%d,%d", board->getSeq(), temp, humid);
+    int n = snprintf(message, message_size, "%d,%d,%d", seecSqn, temp, humid);
     message[message_size - 1] = '\0';
     message[n] = '_';
     Vector &payload = data->getPayload();

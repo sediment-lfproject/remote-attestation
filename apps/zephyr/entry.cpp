@@ -263,3 +263,29 @@ void saveAttestSqnNV(uint32_t sqn)
     uint8_t *buf = (uint8_t *) &sqn;
     write_item((char *) NV_ATTEST_SQN, NV_LEN_ATTEST_SQN, buf);
 }
+
+int getSeecSqnNV()
+{
+    uint8_t buf[16];
+
+    if (reload(NV_SEEC_SQN, sizeof(buf), buf) == 0) {
+        return *(uint32_t *) buf;
+    }
+
+    SD_LOG(LOG_ERR, "getSeecSqn() failed");
+    return 0;
+}
+
+void saveSeecSqnNV(uint32_t sqn)
+{
+    SD_LOG(LOG_INFO, "saveSeecSqnNV() %d", sqn);
+
+    int ret = do_erase(NV_OFFSET_SEEC_SQN, NV_PAGE_SIZE);
+    if (ret) {
+        SD_LOG(LOG_ERR, "erase RA page failed");
+        return;
+    }
+
+    uint8_t *buf = (uint8_t *) &sqn;
+    write_item((char *) NV_SEEC_SQN, NV_LEN_SEEC_SQN, buf);
+}

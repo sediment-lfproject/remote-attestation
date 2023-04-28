@@ -247,17 +247,17 @@ void * BoardRPI::getStartingAddr(string &lib_keyword, uint32_t *blockSize)
     return ret;
 }
 
-void sprintfSqn(string id, char *filename)
+void sqnFile(char *type, string id, char *filename)
 {
     system("mkdir -p " SQN_DIR);
-    sprintf(filename, SQN_DIR "sqn-%s", id.c_str());
+    sprintf(filename, SQN_DIR "sqn-%s-%s", type, id.c_str());
 }
 
-void BoardRPI::saveAttestSqn(uint32_t sqn)
+void saveSqn(char *type, string id, uint32_t sqn)
 {
     char filename[128];
 
-    sprintfSqn(id, filename);
+    sqnFile(type, id, filename);
 
     int fd = open(filename, O_WRONLY | O_CREAT, 0777);
     if (fd == -1) {
@@ -271,16 +271,11 @@ void BoardRPI::saveAttestSqn(uint32_t sqn)
     close(fd);
 }
 
-uint32_t BoardRPI::getAttestSqn()
+uint32_t loadSqn(char *filename)
 {
-    char filename[128];
-
-    sprintfSqn(id, filename);
-
     int fd = open(filename, O_RDONLY);
     if (fd == -1) {
         SD_LOG(LOG_DEBUG, "creating %s", filename);
-        saveAttestSqn(0);
         return 0;
     }
 
@@ -291,6 +286,32 @@ uint32_t BoardRPI::getAttestSqn()
     buf[nb] = '\0';
 
     return (uint32_t) atoi(buf);
+}
+
+void BoardRPI::saveAttestSqn(uint32_t sqn)
+{
+    saveSqn("attest", id, sqn);
+}
+
+uint32_t BoardRPI::getAttestSqn()
+{
+    char filename[128];
+
+    sqnFile("attest", id, filename);
+    return loadSqn(filename);
+}
+
+void BoardRPI::saveSeecSqn(uint32_t sqn)
+{
+    saveSqn("seec", id, sqn);
+}
+
+uint32_t BoardRPI::getSeecSqn()
+{
+    char filename[128];
+
+    sqnFile("seec", id, filename);
+    return loadSqn(filename);
 }
 
 /**

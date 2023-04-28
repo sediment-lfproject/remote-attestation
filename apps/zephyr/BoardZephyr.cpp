@@ -22,6 +22,8 @@ using namespace std;
 
 int getAttestSqnNV();
 void saveAttestSqnNV(uint32_t sqn);
+int getSeecSqnNV();
+void saveSeecSqnNV(uint32_t sqn);
 
 void BoardZephyr::sleepSec(uint32_t sec)
 {
@@ -95,6 +97,16 @@ uint32_t BoardZephyr::getAttestSqn()
     return getAttestSqnNV();
 }
 
+void BoardZephyr::saveSeecSqn(uint32_t sqn)
+{
+    saveSeecSqnNV(sqn);
+}
+
+uint32_t BoardZephyr::getSeecSqn()
+{
+    return getSeecSqnNV();
+}
+
 static Item flash_items[] = {
     { NV_MAGIC,            NV_OFFSET_MAGIC,            NV_LEN_MAGIC,            NV_TYPE_BYTE                },
     { NV_ID,               NV_OFFSET_ID,               NV_LEN_ID,               NV_TYPE_CHAR                },
@@ -121,6 +133,7 @@ static Item flash_items[] = {
     { NV_ATTEST_KEY,       NV_OFFSET_ATTEST_KEY,       NV_LEN_ATTEST_KEY,       NV_TYPE_BYTE                },
     { NV_AUTH_KEY,         NV_OFFSET_AUTH_KEY,         NV_LEN_AUTH_KEY,         NV_TYPE_BYTE                },
     { NV_ATTEST_SQN,       NV_OFFSET_ATTEST_SQN,       NV_LEN_ATTEST_SQN,       NV_TYPE_INT                 },
+    { NV_SEEC_SQN,         NV_OFFSET_SEEC_SQN,         NV_LEN_SEEC_SQN,         NV_TYPE_INT                 },
 
     { NV_PARAMS_SIZE,      NV_OFFSET_PARAMS_SIZE,      NV_LEN_PARAMS_SIZE,      NV_TYPE_INT                 },
     { NV_PARAMS,           NV_OFFSET_PARAMS,           NV_LEN_PARAMS,           NV_TYPE_BLOCK               },

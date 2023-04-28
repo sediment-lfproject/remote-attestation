@@ -93,6 +93,16 @@ public:
         return 0;
     }
 
+    virtual void saveSeecSqn(uint32_t sqn)
+    {
+        (void) sqn;
+    }
+
+    virtual uint32_t getSeecSqn()
+    {
+        return 0;
+    }
+
     const string& getId() const
     {
         return id;
