@@ -12,6 +12,7 @@
  * An entire page must be erased before any block can be properly written.
  * 1's can be changed to 0's, but not 0's to 1s.
  */
+#pragma once
 
 #ifndef __FLASH__
 #define __FLASH__
@@ -182,8 +183,8 @@ extern "C" {
 #define NV_FW_SCRIPT            "fwScript"
 
 // These are used by the subscribers (in a file)
-#define NV_ENCRYPTKEY_SIZE "encryptkey_size"
-#define NV_ENCRYPTKEY      "encryptkey"
+#define NV_ENCRYPTKEY_SIZE      "encryptkey_size"
+#define NV_ENCRYPTKEY           "encryptkey"
 
 // RSA keys starts at a different offset (e.g. a different page for GG, which has 4k pages)
 #define NV_RSA_PRIVATE_SIZE        "rsa_private_size"

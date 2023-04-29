@@ -290,27 +290,27 @@ uint32_t loadSqn(char *filename)
 
 void BoardRPI::saveAttestSqn(uint32_t sqn)
 {
-    saveSqn("attest", id, sqn);
+    saveSqn((char *)"attest", id, sqn);
 }
 
 uint32_t BoardRPI::getAttestSqn()
 {
     char filename[128];
 
-    sqnFile("attest", id, filename);
+    sqnFile((char *)"attest", id, filename);
     return loadSqn(filename);
 }
 
 void BoardRPI::saveSeecSqn(uint32_t sqn)
 {
-    saveSqn("seec", id, sqn);
+    saveSqn((char *)"seec", id, sqn);
 }
 
 uint32_t BoardRPI::getSeecSqn()
 {
     char filename[128];
 
-    sqnFile("seec", id, filename);
+    sqnFile((char *)"seec", id, filename);
     return loadSqn(filename);
 }
 
