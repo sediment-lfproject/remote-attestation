@@ -13,64 +13,9 @@
 #include "Config.hpp"
 #include "Utils.hpp"
 #include "Log.hpp"
+#include "AttestedConfigs.hpp"
 
 using std::filesystem::exists;
-
-static Item flash_items[] = {
-    { NV_MAGIC,            NV_OFFSET_MAGIC,            NV_LEN_MAGIC,            NV_TYPE_BYTE                },
-    { NV_ID,               NV_OFFSET_ID,               NV_LEN_ID,               NV_TYPE_CHAR                },
-    { NV_PROTOCOL,         NV_OFFSET_PROTOCOL,         NV_LEN_PROTOCOL,         NV_TYPE_CHAR                },
-    { NV_ADDRESS,          NV_OFFSET_ADDRESS,          NV_LEN_ADDRESS,          NV_TYPE_CHAR                },
-    { NV_PORT,             NV_OFFSET_PORT,             NV_LEN_PORT,             NV_TYPE_INT                 },
-    { NV_KEY_DIST,         NV_OFFSET_KEY_DIST,         NV_LEN_KEY_DIST,         NV_TYPE_CHAR                },
-    { NV_KEY_CHG_INTVL,    NV_OFFSET_KEY_CHG_INTVL,    NV_LEN_KEY_CHG_INTVL,    NV_TYPE_INT                 },
-    { NV_ENCRYPT,          NV_OFFSET_ENCRYPT,          NV_LEN_ENCRYPT,          NV_TYPE_BOOL                },
-    { NV_REPORT_INTVL,     NV_OFFSET_REPORT_INTVL,     NV_LEN_REPORT_INTVL,     NV_TYPE_INT                 },
-    { NV_ATTEST,           NV_OFFSET_ATTEST,           NV_LEN_ATTEST,           NV_TYPE_BOOL                },
-    { NV_SEEC,             NV_OFFSET_SEEC,             NV_LEN_SEEC,             NV_TYPE_BOOL                },
-    { NV_KEY_ENCRYPTION,   NV_OFFSET_KEY_ENCRYPTION,   NV_LEN_KEY_ENCRYPTION,   NV_TYPE_BOOL                },
-    { NV_SIGNING,          NV_OFFSET_SIGNING,          NV_LEN_SIGNING,          NV_TYPE_BOOL                },
-    { NV_KEY_CHANGE,       NV_OFFSET_KEY_CHANGE,       NV_LEN_KEY_CHANGE,       NV_TYPE_BOOL                },
-    { NV_PASSPORT_PERIOD,  NV_OFFSET_PASSPORT_PERIOD,  NV_LEN_PASSPORT_PERIOD,  NV_TYPE_INT                 },
-    { NV_PAYLOAD_SIZE,     NV_OFFSET_PAYLOAD_SIZE,     NV_LEN_PAYLOAD_SIZE,     NV_TYPE_INT                 },
-    { NV_PASS_THRU,        NV_OFFSET_PASS_THRU,        NV_LEN_PASS_THRU,        NV_TYPE_BOOL                },
-    { NV_NUM_CYCLES,       NV_OFFSET_NUM_CYCLES,       NV_LEN_NUM_CYCLES,       NV_TYPE_INT                 },
-    { NV_ITERATIONS,       NV_OFFSET_ITERATIONS,       NV_LEN_ITERATIONS,       NV_TYPE_INT                 },
-    { NV_AUTHENTICATION,   NV_OFFSET_AUTHENTICATION,   NV_LEN_AUTHENTICATION,   NV_TYPE_BOOL                },
-
-    { NV_ENC_KEY,          NV_OFFSET_ENC_KEY,          NV_LEN_ENC_KEY,          NV_TYPE_BYTE                },
-    { NV_ATTEST_KEY,       NV_OFFSET_ATTEST_KEY,       NV_LEN_ATTEST_KEY,       NV_TYPE_BYTE                },
-    { NV_AUTH_KEY,         NV_OFFSET_AUTH_KEY,         NV_LEN_AUTH_KEY,         NV_TYPE_BYTE                },
-    { NV_ATTEST_SQN,       NV_OFFSET_ATTEST_SQN,       NV_LEN_ATTEST_SQN,       NV_TYPE_INT                 },
-
-    { NV_PARAMS_SIZE,      NV_OFFSET_PARAMS_SIZE,      NV_LEN_PARAMS_SIZE,      NV_TYPE_INT                 },
-    { NV_PARAMS,           NV_OFFSET_PARAMS,           NV_LEN_PARAMS,           NV_TYPE_BLOCK               },
-
-    { NV_URIPATH_SIZE,     NV_OFFSET_URIPATH_SIZE,     NV_LEN_URIPATH_SIZE,     NV_TYPE_INT                 },
-    { NV_URIPATH,          NV_OFFSET_URIPATH,          NV_LEN_URIPATH,          NV_TYPE_BLOCK               },
-
-    { NV_TIMEPATH_SIZE,    NV_OFFSET_TIMEPATH_SIZE,    NV_LEN_TIMEPATH_SIZE,    NV_TYPE_INT                 },
-    { NV_TIMEPATH,         NV_OFFSET_TIMEPATH,         NV_LEN_TIMEPATH,         NV_TYPE_BLOCK               },
-
-    { NV_SIGNKEY_SIZE,     NV_OFFSET_SIGNKEY_SIZE,     NV_LEN_SIGNKEY_SIZE,     NV_TYPE_INT                 },
-    { NV_SIGNKEY,          NV_OFFSET_SIGNKEY,          NV_LEN_SIGNKEY,          NV_TYPE_BLOCK               },
-
-    { NV_RSA_PRIVATE_SIZE, NV_OFFSET_RSA_PRIVATE_SIZE, NV_LEN_RSA_PRIVATE_SIZE, NV_TYPE_INT                 },
-    { NV_RSA_PRIVATE,      NV_OFFSET_RSA_PRIVATE,      NV_LEN_RSA_PRIVATE,      NV_TYPE_LINE                },
-
-    { NV_RSA_PUBLIC_SIZE,  NV_OFFSET_RSA_PUBLIC_SIZE,  NV_LEN_RSA_PUBLIC_SIZE,  NV_TYPE_INT                 },
-    { NV_RSA_PUBLIC,       NV_OFFSET_RSA_PUBLIC,       NV_LEN_RSA_PUBLIC,       NV_TYPE_LINE                },
-
-    { NV_RSA_SIGN_SIZE,    NV_OFFSET_RSA_SIGN_SIZE,    NV_LEN_RSA_SIGN_SIZE,    NV_TYPE_INT                 },
-    { NV_RSA_SIGN,         NV_OFFSET_RSA_SIGN,         NV_LEN_RSA_SIGN,         NV_TYPE_LINE                },
-
-    { NV_RSA_VERIFY_SIZE,  NV_OFFSET_RSA_VERIFY_SIZE,  NV_LEN_RSA_VERIFY_SIZE,  NV_TYPE_INT                 },
-    { NV_RSA_VERIFY,       NV_OFFSET_RSA_VERIFY,       NV_LEN_RSA_VERIFY,       NV_TYPE_LINE                },
-
-    { NV_DOWNLOAD,         NV_OFFSET_DOWNLOAD,         NV_LEN_DOWNLOAD,         NV_TYPE_INT                 },
-    { NV_DATA_TRANSPORT,   NV_OFFSET_DATA_TRANSPORT,   NV_LEN_DATA_TRANSPORT,   NV_TYPE_CHAR                },
-    { NV_LOG_LEVEL,        NV_OFFSET_LOG_LEVEL,        NV_LEN_LOG_LEVEL,        NV_TYPE_INT                 },
-};
 
 void dump(const uint8_t *data, int num_items)
 {
@@ -78,9 +23,9 @@ void dump(const uint8_t *data, int num_items)
     for (int i = 0; i < num_items; i++)
     {
         int start = offset;
-        int end = offset + flash_items[i].len;
+        int end = offset + attested_items[i].len;
         
-        printf("%s ", flash_items[i].name);
+        printf("%s ", attested_items[i].name);
         for (int j = start; j < end; j++) 
             printf("%c", isprint(data[j]) ? data[j] : '.');
         printf("\n");
@@ -89,7 +34,7 @@ void dump(const uint8_t *data, int num_items)
             printf("%02x", data[j]);
         printf("\n\n");
 
-        offset += flash_items[i].len;
+        offset += attested_items[i].len;
     }
 }
 
@@ -139,16 +84,6 @@ bool isMultiline(string key)
            key.compare(NV_TIMEPATH));
 }
 
-bool isNotInterested(string key)
-{
-    return !(key.compare(NV_ENCRYPTKEY) &&
-           key.compare(NV_ENCRYPTKEY_SIZE) &&
-           key.compare(NV_FW_SCRIPT) &&
-           key.compare(NV_LOG_LEVEL) &&
-           key.compare(NV_DATA_TRANSPORT) &&
-           key.compare(NV_DOWNLOAD));
-}
-
 char *gatherConfigBlocks(const string &filename, int *size)
 {
     if (!exists(filename)) {
@@ -161,15 +96,10 @@ char *gatherConfigBlocks(const string &filename, int *size)
     string line, key, value;
 
     int total = 0;
-    int total_items = sizeof(flash_items) / sizeof(Item);
-    int num_items = total_items;
-    for (int i = 0; i < total_items; i++)
+    int num_items = sizeof(attested_items) / sizeof(Item);
+    for (int i = 0; i < num_items; i++)
     {
-        total += flash_items[i].len;
-        if (!strcmp(flash_items[i].name, NV_SIGNKEY)) {
-            num_items = i + 1;
-            break;
-        }
+        total += attested_items[i].len;
     }
     *size = total;
 
@@ -194,19 +124,17 @@ char *gatherConfigBlocks(const string &filename, int *size)
         int offset = 0;
         for (i = 0; i < num_items; i++)
         {
-            if (key.compare(flash_items[i].name))
-                offset += flash_items[i].len;
+            if (key.compare(attested_items[i].name))
+                offset += attested_items[i].len;
             else
                 break;
         }
         if (i == num_items) {
-            if (!isNotInterested(key))
-                SD_LOG(LOG_ERR, "not found: %s", key.c_str());
+            // not interested
             continue;
-            // break;
         }
 
-        Item *item = &flash_items[i];
+        Item *item = &attested_items[i];
         if (item->type == NV_TYPE_CHAR ||
             item->type == NV_TYPE_LINE) {
             strncpy((char *)(pool + offset), (char *)&value[0], value.length());
