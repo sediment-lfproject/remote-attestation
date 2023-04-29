@@ -45,6 +45,7 @@ file(GLOB PROVER_SRC
   ${RPI}/*.cpp
   ${APPS_COMMON}/*.cpp
   ${SVR_COMMON}/CommandLine.cpp
+  servers/verifier/ConfigAttest.cpp
 )
 
 add_executable(${PROVER}
