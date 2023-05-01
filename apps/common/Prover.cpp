@@ -742,6 +742,8 @@ bool Prover::handleResult(Message *received)
         return false;
     }
 
+    expecting = DATA;
+
     Result *result        = (Result *) received;
     Acceptance acceptance = result->getAcceptance();
     if (acceptance == REJECT || acceptance == NO_COMM) {
@@ -749,13 +751,11 @@ bool Prover::handleResult(Message *received)
     }
     else if (acceptance == ATTEST) {
         rejectCount = 0;
-        expecting   = ATTESTATION_REQUEST;
+        expecting   = PASSPORT_REQUEST;
     }
     else if (acceptance == ACCEPT) {
         rejectCount = 0;
     }
-
-    expecting = DATA;
     return true;
 }
 

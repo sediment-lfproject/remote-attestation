@@ -566,15 +566,17 @@ void Verifier::runService()
             device = Device::findDeviceByIP(ep);
         }
         else if (!type.compare("id")) {
-            string deviceID = line.substr(space + 1);
+            int secondSpace = line.substr(space + 1).find(" ") + type.length();
+            string deviceID = line.substr(space + 1, secondSpace - space);
             device = Device::findDevice(deviceID);
+            sendAlert(Reason::REQUESTED, deviceID, NULL);
         }
 
         if (device == NULL) {
             SD_LOG(LOG_ERR, "unknown device: %s", line.c_str());
         }
         else {
-            SD_LOG(LOG_WARNING, "TODO: on-demand RA received, actual service not implemented");
+            SD_LOG(LOG_INFO, "attestation requested");
         }
         close(service_sock);
     }
