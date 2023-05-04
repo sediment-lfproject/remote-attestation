@@ -64,7 +64,7 @@ public:
 #ifdef SEEC_ENABLED
     void encryptData(Vector &iv, Vector &payload, int MAX_MESSAGE_SIZE, MeasurementList &measList, Board *board,
       string &deviceID, Crypto *crypto, char *plaintext);
-    void decryptData(Vector &iv, Vector &payload, Board *board, MeasurementList &measList, string &deviceID);
+    void decryptData(Vector &iv, Vector &payload, Board *board, MeasurementList &measList, string &deviceID, uint32_t &seecSqn);
     void encryptKey(KeyBox &keyBox, Board *board, MeasurementList &measList, string &deviceID);
     void decryptKey(KeyBox &keyBox);
 #endif
