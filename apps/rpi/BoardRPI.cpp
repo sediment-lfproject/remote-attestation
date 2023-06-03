@@ -247,17 +247,17 @@ void * BoardRPI::getStartingAddr(string &lib_keyword, uint32_t *blockSize)
     return ret;
 }
 
-void sqnFile(char *type, string id, char *filename)
+static void intFile(char *cat, char *type, string id, char *filename)
 {
     system("mkdir -p " SQN_DIR);
-    sprintf(filename, SQN_DIR "sqn-%s-%s", type, id.c_str());
+    sprintf(filename, SQN_DIR "%s-%s-%s", cat, type, id.c_str());
 }
 
-void saveSqn(char *type, string id, uint32_t sqn)
+static void saveInt(char *cat, char *type, string id, uint32_t sqn)
 {
     char filename[128];
 
-    sqnFile(type, id, filename);
+    intFile(cat, type, id, filename);
 
     int fd = open(filename, O_WRONLY | O_CREAT, 0777);
     if (fd == -1) {
@@ -290,28 +290,41 @@ uint32_t loadSqn(char *filename)
 
 void BoardRPI::saveAttestSqn(uint32_t sqn)
 {
-    saveSqn((char *)"attest", id, sqn);
+    saveInt((char *)"sqn", (char *)"attest", id, sqn);
 }
 
 uint32_t BoardRPI::getAttestSqn()
 {
     char filename[128];
 
-    sqnFile((char *)"attest", id, filename);
+    intFile((char *)"sqn", (char *)"attest", id, filename);
     return loadSqn(filename);
 }
 
 void BoardRPI::saveSeecSqn(uint32_t sqn)
 {
-    saveSqn((char *)"seec", id, sqn);
+    saveInt((char *)"sqn", (char *)"seec", id, sqn);
 }
 
 uint32_t BoardRPI::getSeecSqn()
 {
     char filename[128];
 
-    sqnFile((char *)"seec", id, filename);
+    intFile((char *)"sqn", (char *)"seec", id, filename);
     return loadSqn(filename);
+}
+
+uint32_t BoardRPI::getReportInterval()
+{
+    char filename[128];
+
+    intFile((char *)"report", (char *)"interval", id, filename);
+    return loadSqn(filename);
+}
+
+void BoardRPI::saveReportInterval(uint32_t interval)
+{
+    saveInt((char *)"report", (char *)"interval", id, interval);
 }
 
 /**
@@ -320,6 +333,12 @@ uint32_t BoardRPI::getSeecSqn()
 */
 char* BoardRPI::getConfigBlocks(int *len) 
 {
-    char *gatherConfigBlocks(const string &filename, int *len);  // allocation here
-    return gatherConfigBlocks(configFile, len);
+    // for demo purpose, the reporting interval is reloaded from /tmp/sqn/report-interval-<id>
+    // instead of the config file.
+    char *gatherConfigBlocks(const string &filename, int *len, int **report_interval);  // allocation here
+    int *report_interval;
+    char *block = gatherConfigBlocks(configFile, len, &report_interval);
+
+    *report_interval = getReportInterval();
+    return block;
 }

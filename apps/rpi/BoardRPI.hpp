@@ -32,6 +32,8 @@ public:
     virtual void saveSeecSqn(uint32_t sqn);
     virtual uint32_t getSeecSqn();    
     virtual char* getConfigBlocks(int *len);
+    virtual uint32_t getReportInterval();
+    virtual void saveReportInterval(uint32_t interval);  
 
     void setConfigFile(string cfg)
     {

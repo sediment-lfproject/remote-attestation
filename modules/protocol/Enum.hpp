@@ -87,10 +87,15 @@ enum Protocol {
 enum Cause {
     MIN_CAUSE        = 0,
 
-    NONE             = 1,
-    INVALID_PASSPORT = 2,
+    CAUSE_POWER_ON         = 1,
+    CAUSE_INVALID_PASSPORT = 2,
+    CAUSE_INIT             = 3,
+    CAUSE_RESET            = 4,
+    CAUSE_PERIODIC         = 5,
+    CAUSE_REQUESTED        = 6,
+    CAUSE_DATA_REJECTED    = 7,
 
-    MAX_CAUSE        = 3,
+    MAX_CAUSE                 = 8,
 };
 
 enum EvidenceType {

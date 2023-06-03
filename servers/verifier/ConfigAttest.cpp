@@ -84,7 +84,7 @@ bool isMultiline(string key)
            key.compare(NV_TIMEPATH));
 }
 
-char *gatherConfigBlocks(const string &filename, int *size)
+char *gatherConfigBlocks(const string &filename, int *size, int **report_interval)
 {
     if (!exists(filename)) {
         SD_LOG(LOG_ERR, "file not exists: '%s'", filename.c_str());
@@ -169,6 +169,11 @@ char *gatherConfigBlocks(const string &filename, int *size)
         }
         else {
             SD_LOG(LOG_ERR, "type: %d", item->type);
+        }
+
+        // for demo purpose, the report_interval is to be read from the persistent storage
+        if (!key.compare(NV_REPORT_INTVL)) {
+            *report_interval = (int *) &pool[offset];
         }
 
         if (isMultiline(key))

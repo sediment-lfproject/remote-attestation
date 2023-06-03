@@ -43,6 +43,8 @@ int main(int argc, char **argv)
     prover.setSedimentHome(cli.getSedimentHome());
 #endif
 
+    board->saveReportInterval(config.getReportInterval());
+
     if (config.getTransport() == TRANSPORT_MQTT)
         prover.runMqtt();
     else

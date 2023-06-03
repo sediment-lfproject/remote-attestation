@@ -290,7 +290,7 @@ Message * Firewall::handlePassportCheck(PassportCheck *passportCheck, Device *de
     permission->setDeviceID(passportCheck->getDeviceID());
 
     permission->setAdmittance(GRANTED);
-    permission->setCause(NONE);
+    permission->setCause(CAUSE_INIT);
     permission->setEndpoint(relyingParty);
 
     return permission;

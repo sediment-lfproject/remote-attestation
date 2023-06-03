@@ -243,11 +243,26 @@ string Log::toProtocol(Protocol acceptance)
 string Log::toCause(Cause cause)
 {
     switch (cause) {
-    case NONE:
-        return "NONE";
+    case CAUSE_POWER_ON:
+        return "POWER_ON";
 
-    case INVALID_PASSPORT:
+    case CAUSE_INVALID_PASSPORT:
         return "INVALID_PASSPORT";
+
+    case CAUSE_INIT:
+        return "INIT";
+        
+    case CAUSE_RESET:
+        return "RESET";
+        
+    case CAUSE_PERIODIC:
+        return "PERIODIC";
+        
+    case CAUSE_REQUESTED:
+        return "REQUESTED";
+        
+    case CAUSE_DATA_REJECTED:
+        return "DATA_REJECTED";
 
     default:
         return "Bad Cause";

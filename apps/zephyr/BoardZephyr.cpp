@@ -21,10 +21,10 @@
 
 using namespace std;
 
-int getAttestSqnNV();
-void saveAttestSqnNV(uint32_t sqn);
-int getSeecSqnNV();
-void saveSeecSqnNV(uint32_t sqn);
+extern "C" 
+{
+    int reload(const char *item_name, int size, uint8_t *buf);
+}
 
 void BoardZephyr::sleepSec(uint32_t sec)
 {
@@ -90,22 +90,66 @@ void * BoardZephyr::getStartingAddr(string &library_keyword, uint32_t *blockSize
 
 void BoardZephyr::saveAttestSqn(uint32_t sqn)
 {
-    saveAttestSqnNV(sqn);
+    SD_LOG(LOG_INFO, "saveAttestSqn() %d", sqn);
+
+    int ret = do_erase(NV_RA_OFFSET, NV_PAGE_SIZE);
+    if (ret) {
+        SD_LOG(LOG_ERR, "erase RA SQN page failed");
+        return;
+    }
+
+    uint8_t *buf = (uint8_t *) &sqn;
+    write_item((char *) NV_ATTEST_SQN, NV_LEN_ATTEST_SQN, buf);
 }
 
 uint32_t BoardZephyr::getAttestSqn()
 {
-    return getAttestSqnNV();
+    uint8_t buf[16];
+
+    if (reload(NV_ATTEST_SQN, sizeof(buf), buf) == 0) {
+        return *(uint32_t *) buf;
+    }
+
+    SD_LOG(LOG_ERR, "getAttestSqn() failed");
+    return 0;
 }
 
 void BoardZephyr::saveSeecSqn(uint32_t sqn)
 {
-    saveSeecSqnNV(sqn);
+    SD_LOG(LOG_INFO, "saveSeecSqn() %d", sqn);
+
+    int ret = do_erase(NV_OFFSET_SEEC_SQN, NV_PAGE_SIZE);
+    if (ret) {
+        SD_LOG(LOG_ERR, "erase SEEC SQN page failed");
+        return;
+    }
+
+    uint8_t *buf = (uint8_t *) &sqn;
+    write_item((char *) NV_SEEC_SQN, NV_LEN_SEEC_SQN, buf);
 }
 
 uint32_t BoardZephyr::getSeecSqn()
 {
-    return getSeecSqnNV();
+    uint8_t buf[16];
+
+    if (reload(NV_SEEC_SQN, sizeof(buf), buf) == 0) {
+        return *(uint32_t *) buf;
+    }
+
+    SD_LOG(LOG_ERR, "getSeecSqn() failed");
+    return 0;
+}
+
+uint32_t BoardZephyr::getReportInterval()
+{
+    uint8_t buf[16];
+
+    if (reload(NV_REPORT_INTVL, sizeof(buf), buf) == 0) {
+        return *(uint32_t *) buf;
+    }
+
+    SD_LOG(LOG_ERR, "getReportInterval() failed");
+    return 0;
 }
 
 bool isVariableLen(string key)

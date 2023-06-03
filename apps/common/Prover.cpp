@@ -32,10 +32,6 @@ static bool isAttestation(MessageID id);
 static int full_reset_count = 0;
 static bool proc_completed  = false;
 
-#if !defined(SEEC_ENABLED)
-static bool attested_once = false;
-#endif
-
 void Prover::run()
 {
     attestSqn = board->getAttestSqn();
@@ -137,31 +133,19 @@ void Prover::pause(int bad_proc_count)
 {
     int delay = 0;
 
-    if (expecting == DATA) { // only interrupt the procedures when in normal DATA procedure
-        delay = config.getReportInterval();
-
-        // precedence in order : attestationEnabled, keyChangeEnabled, encryptionEnabled
-        if (rejectCount >= MAX_REJECT) {
-            rejectCount = 0;
-            expecting   = config.isAttestationEnabled() ? PASSPORT_REQUEST : KEY_CHANGE;
+    if (expecting == DATA) {
+        if (cause == CAUSE_PERIODIC) {
+            // delay = config.getReportInterval();
+            delay = board->getReportInterval();  // for demo purposes, the interval is reloaded each time
         }
-
-        if (config.isKeyChangeEnabled() && config.isEncryptionEnabled()) {
-            int remain = config.getKeyChangeInterval() - (board->getTimestamp() - seec.getLastChangeKey());
-            if (remain <= 0) {
-                expecting = KEY_CHANGE;
-            }
-            else {
-                SD_LOG(LOG_DEBUG, "encryption key change in %d seconds", remain);
-            }
+    }
+    else if (expecting == PASSPORT_REQUEST) {
+        if (cause == CAUSE_PERIODIC) {
+            delay = passport.getExpireDate() - board->getTimestamp();
+            SD_LOG(LOG_WARNING, "passport expired in %d seconds", delay);
         }
-
-        if (config.isAttestationEnabled()) {
-            int remain = passport.getExpireDate() - board->getTimestamp();
-            if (remain < (int) config.getReportInterval()) {
-                expecting = PASSPORT_REQUEST;
-                SD_LOG(LOG_WARNING, "passport expired");
-            }
+        else if (cause == CAUSE_INVALID_PASSPORT) {
+            delay = board->getReportInterval();  // for demo purposes, the interval is reloaded each time
         }
     }
 
@@ -169,13 +153,6 @@ void Prover::pause(int bad_proc_count)
         delay = (1 << ((full_reset_count * MAX_FAILURES + bad_proc_count - 1) / MAX_FAILURES));
         delay = (delay > MAX_DELAY) ? MAX_DELAY : delay;
     }
-#if !defined(SEEC_ENABLED)
-    else if (expecting == PASSPORT_REQUEST && attested_once) {
-        uint32_t expired = passport.getExpireDate();
-        delay = expired - board->getTimestamp();
-        SD_LOG(LOG_WARNING, "passport expired in %d seconds", delay);
-    }
-#endif
 
     if (delay > 0)
         board->sleepSec(delay);
@@ -380,10 +357,10 @@ bool Prover::handleConfig(Message *received)
         board->setBaseTime(received->getTimestamp());
 
     if (!config.isAttestationEnabled()) {
-        expecting = DATA;
+        transit(DATA, CAUSE_POWER_ON);
     }
     else {
-        expecting = PASSPORT_REQUEST;
+        transit(PASSPORT_REQUEST, CAUSE_INIT);
     }
     return true;
 }
@@ -565,8 +542,7 @@ bool Prover::handleGrant(Message *received)
     passport.copy(grant->getPassport());
 
 #if !defined(SEEC_ENABLED)
-    attested_once = true;
-    expecting     = PASSPORT_REQUEST;
+    transit(PASSPORT_REQUEST, CAUSE_PERIODIC);
 #else
     if (config.isSeecEnabled())
         expecting = PASSPORT_CHECK;
@@ -597,12 +573,8 @@ bool Prover::handlePermission(Message *received)
 
     endpoint.copy(((Permission *) received)->getEndpoint());
 
-    if (config.isKeyChangeEnabled()) {
-        expecting = KEY_CHANGE;
-    }
-    else {
-        expecting = DATA;
-    }
+    transit(DATA, cause);
+
     return true;
 }
 
@@ -744,17 +716,25 @@ bool Prover::handleResult(Message *received)
 
     expecting = DATA;
 
-    Result *result        = (Result *) received;
+    Result *result = (Result *) received;
     Acceptance acceptance = result->getAcceptance();
     if (acceptance == REJECT || acceptance == NO_COMM) {
         rejectCount++;
+        if (rejectCount >= MAX_REJECT) {
+            rejectCount = 0;
+            transit(PASSPORT_REQUEST, CAUSE_DATA_REJECTED);
+        }
     }
     else if (acceptance == ATTEST) {
         rejectCount = 0;
-        expecting   = PASSPORT_REQUEST;
+        transit(PASSPORT_REQUEST, CAUSE_REQUESTED);
+    }
+    else if (isPassportExipred()) {
+        transit(PASSPORT_REQUEST, CAUSE_INVALID_PASSPORT);
     }
     else if (acceptance == ACCEPT) {
         rejectCount = 0;
+        transit(DATA, CAUSE_PERIODIC);
     }
     return true;
 }
@@ -907,6 +887,7 @@ void Prover::restartAttestionRequest()
         SD_LOG(LOG_ERR, "Verifier failure");
         attestRestarts = 0;
         // XXX: Send message to other server
+        cause = CAUSE_RESET;
         moveTo(PASSPORT_REQUEST, NULL);
         return;
     }
@@ -1002,7 +983,7 @@ static bool isAttestation(MessageID id)
 void Prover::resetProcedure(bool fullReset)
 {
     if (fullReset) {
-        expecting = PASSPORT_REQUEST;
+        transit(PASSPORT_REQUEST, CAUSE_RESET);
         full_reset_count++;
         return;
     }
@@ -1010,7 +991,7 @@ void Prover::resetProcedure(bool fullReset)
     switch (expecting) {
     case PASSPORT_REQUEST:
     case PASSPORT_RESPONSE:
-        expecting = PASSPORT_REQUEST;
+        transit(PASSPORT_REQUEST, CAUSE_RESET);
         break;
     case ATTESTATION_REQUEST:
     case CHALLENGE:
@@ -1050,6 +1031,11 @@ bool Prover::toGiveup(bool success, int *bad_count, bool fullReset)
         }
     }
     return false;
+}
+
+bool Prover::isPassportExipred()
+{
+    return (passport.getExpireDate() - board->getTimestamp()) < config.getReportInterval();
 }
 
 void Prover::handlePubData(char *data)
