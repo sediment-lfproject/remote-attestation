@@ -40,6 +40,11 @@ public:
     virtual uint32_t getHumidity();
     virtual uint32_t getTemperature();
 
+    virtual uint32_t getReportInterval()
+    {
+        return 5;
+    } 
+
     /**
      * allocate a memory block to collect the configurations.
      * caller is responsible for freeing the buffer.

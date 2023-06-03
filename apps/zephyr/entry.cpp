@@ -21,7 +21,7 @@ Config config(NV_PROVER);
 BoardZephyr board;
 
 extern "C" {
-static int reload(const char *item_name, int size, uint8_t *buf)
+int reload(const char *item_name, int size, uint8_t *buf)
 {
     memset(buf, 0, size);
     int ret = read_item(item_name, size, buf);
@@ -237,55 +237,3 @@ void set_lte_ready()
         prover.run();
 }
 } // extern "C"
-
-int getAttestSqnNV()
-{
-    uint8_t buf[16];
-
-    if (reload(NV_ATTEST_SQN, sizeof(buf), buf) == 0) {
-        return *(uint32_t *) buf;
-    }
-
-    SD_LOG(LOG_ERR, "getAttestSqn() failed");
-    return 0;
-}
-
-void saveAttestSqnNV(uint32_t sqn)
-{
-    SD_LOG(LOG_INFO, "saveAttestSqnNV() %d", sqn);
-
-    int ret = do_erase(NV_RA_OFFSET, NV_PAGE_SIZE);
-    if (ret) {
-        SD_LOG(LOG_ERR, "erase RA page failed");
-        return;
-    }
-
-    uint8_t *buf = (uint8_t *) &sqn;
-    write_item((char *) NV_ATTEST_SQN, NV_LEN_ATTEST_SQN, buf);
-}
-
-int getSeecSqnNV()
-{
-    uint8_t buf[16];
-
-    if (reload(NV_SEEC_SQN, sizeof(buf), buf) == 0) {
-        return *(uint32_t *) buf;
-    }
-
-    SD_LOG(LOG_ERR, "getSeecSqn() failed");
-    return 0;
-}
-
-void saveSeecSqnNV(uint32_t sqn)
-{
-    SD_LOG(LOG_INFO, "saveSeecSqnNV() %d", sqn);
-
-    int ret = do_erase(NV_OFFSET_SEEC_SQN, NV_PAGE_SIZE);
-    if (ret) {
-        SD_LOG(LOG_ERR, "erase RA page failed");
-        return;
-    }
-
-    uint8_t *buf = (uint8_t *) &sqn;
-    write_item((char *) NV_SEEC_SQN, NV_LEN_SEEC_SQN, buf);
-}

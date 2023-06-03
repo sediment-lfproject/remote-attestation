@@ -24,6 +24,7 @@ protected:
 
     Endpoint rpEndpoint; // saved relying party endpoint
     MessageID expecting = CONFIG;
+    Cause cause = CAUSE_POWER_ON;
     int mySock = -1;
 
     uint32_t rejectCount    = 0; // consecutive times of data being rejected
@@ -78,6 +79,12 @@ protected:
     void restartAttestionRequest();
     void resetProcedure(bool proc);
     bool toGiveup(bool msg_success, int *bad_msg_count, bool fullReset);
+    bool isPassportExipred();
+    
+    void transit(MessageID state, Cause cause) {
+        this->expecting = state;
+        this->cause = cause;
+    }
 
 public:
     Prover(Config &config, Board *board)

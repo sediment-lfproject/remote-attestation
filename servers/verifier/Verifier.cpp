@@ -352,13 +352,14 @@ bool Verifier::verifyFullFirmware(EvidenceItem *item, Device *device, EvidenceTy
     return verifyHashing(item, device, type, bufPtr, fileSize, -1);
 }
 
-char *gatherConfigBlocks(const string &filename, int *size);
 bool Verifier::verifyConfigs(EvidenceItem *item, Device *device, EvidenceType type)
 {
     string filename = getSedimentHome() + device->getConfigs();
     int fileSize;
 
-    unsigned char *bufPtr = (unsigned char *) gatherConfigBlocks(filename, &fileSize);
+    char *gatherConfigBlocks(const string &filename, int *size, int **report_interval);
+    int *dummy;
+    unsigned char *bufPtr = (unsigned char *) gatherConfigBlocks(filename, &fileSize, &dummy);
     if (bufPtr == 0) {
         SD_LOG(LOG_ERR, "config error: %s", filename.c_str());
         return false;
