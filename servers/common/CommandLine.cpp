@@ -20,10 +20,12 @@ void CommandLine::printUsage(char *cmd)
          << "Use the specified device database." << endl
          << "  -e/--sediment-home <sediment home directory>\n\t"
          << "Set the sediment installation directory." << endl
-         << "  -p/--wdkibe-pub-key <publisher key file>\n\t"
-         << "Read WKD-IBE publisher key material file. Used only by publishers." << endl
-         << "  -s/--wdkibe-sub-key <subscriber key file>\n\t"
-         << "Read WKD-IBE subscriber key material file. Used only by subscribers" << endl
+         << "  -p/--publisher <config file>\n\t"
+         << "Read publisher configuration file. Used only by publishers." << endl
+         << "  -s/--subscriber <config file>\n\t"
+         << "Read subscriber configuration file. Used only by subscribers" << endl
+         << "  -v/--signature-verifier\n\t"
+         << "Run as a signature verifier. Used only by the application server" << endl         
          << "  -h/--help\n\t"
          << "This help." << endl
     ;
@@ -35,17 +37,18 @@ void CommandLine::parseCmdline(int argc, char *argv[])
     int c;
 
     struct option long_options[] = {
-        { "database",       required_argument, 0, 'd' },
-        { "sediment-home",  required_argument, 0, 'e' },
-        { "wdkibe-pub-key", required_argument, 0, 'p' },
-        { "wdkibe-sub-key", required_argument, 0, 's' },
-        { "help",           no_argument,       0, 'h' },
-        { 0,                0,                 0, 0   }
+        { "database",           required_argument, 0, 'd' },
+        { "sediment-home",      required_argument, 0, 'e' },
+        { "publisher",          required_argument, 0, 'p' },
+        { "subscriber",         required_argument, 0, 's' },
+        { "signature-verifier", no_argument,       0, 'v' },
+        { "help",               no_argument,       0, 'h' },
+        { 0,                    0,                 0, 0   }
     };
 
     int option_index = 0;
 
-    while ((c = getopt_long(argc, argv, "hd:e:p:s:",
+    while ((c = getopt_long(argc, argv, "hd:e:p:s:v",
       long_options, &option_index)) != -1)
     {
         switch (c) {
@@ -70,6 +73,9 @@ void CommandLine::parseCmdline(int argc, char *argv[])
         case 'h':
             printUsage(argv[0]);
             break;
+        case 'v':
+            sigVerifier = true;
+            break;            
         default:
             printUsage(argv[0]);
             break;
