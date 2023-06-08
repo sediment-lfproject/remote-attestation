@@ -30,13 +30,14 @@ void Seec::encryptData(Vector &iv, Vector &payload, int message_size, Measuremen
     }
 }
 
-bool Seec::decryptData(Vector &iv, Vector &payload, Board *board, MeasurementList &measList, string &deviceID, uint32_t &seecSqn)
+bool Seec::decryptData(Vector &iv, Vector &payload, Board *board, MeasurementList &measList, 
+                       string &deviceID, uint32_t &seecSqn, bool sigVerifier)
 {
     KeyEncType keyEncType = config.getKeyDistMethod();
 
     switch (keyEncType) {
     case KEY_ENC_TYPE_JEDI:
-        return jedi.decryptData(iv, payload, board, measList, deviceID, seecSqn);
+        return jedi.decryptData(iv, payload, board, measList, deviceID, seecSqn, sigVerifier);
     case KEY_ENC_TYPE_RSA:
         return rsa.decryptData(iv, payload, board, measList, deviceID);
     default:
