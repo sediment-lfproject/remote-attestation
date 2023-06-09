@@ -109,7 +109,8 @@ class callback : public virtual mqtt::callback
 
     void message_arrived(mqtt::const_message_ptr msg) override
     {
-        SD_LOG(LOG_DEBUG, "MQTT message: (%s) %s", msg->get_topic().c_str(), msg->to_string().c_str());
+        // SD_LOG(LOG_DEBUG, "MQTT message: (%s) %s", msg->get_topic().c_str(), msg->to_string().c_str());
+        SD_LOG(LOG_DEBUG, "MQTT message: (%s) len=%d", msg->get_topic().c_str(), msg->to_string().size());
         mqtt->handlePubData((char *) msg->to_string().c_str());
     }
 
