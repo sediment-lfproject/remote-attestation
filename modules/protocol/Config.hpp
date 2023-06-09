@@ -54,6 +54,10 @@ protected:
 
     string fwScript; // firewall script to run on Alert message bby Firewall
 
+    string mqttUrl = "127.0.0.1";
+    string topicPub;
+    string topicSub;
+
 public:
     Config()
     { }
@@ -303,4 +307,19 @@ public:
     {
         return fwScript;
     }
+    
+    const string& getMqttUrl()
+    {
+        return mqttUrl;
+    }
+
+    const string& getTopicPub()
+    {
+        return topicPub;
+    }
+
+    const string& getTopicSub()
+    {
+        return topicSub;
+    }    
 };

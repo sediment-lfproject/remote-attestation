@@ -92,10 +92,16 @@ class callback : public virtual mqtt::callback
     {
         (void) cause;
         ok = true;
-        SD_LOG(LOG_INFO, "MQTT connected");
 
-        cli_.subscribe(mqtt->getTopicSub(), QOS, nullptr, subListener_);
-        SD_LOG(LOG_INFO, "MQTT subscribes to %s with QOS %d", mqtt->getTopicSub().c_str(), QOS);
+        SD_LOG(LOG_INFO, "MQTT connected");
+        if (!mqtt->getTopicPub().empty()) {
+            SD_LOG(LOG_INFO, "publish to %s", mqtt->getTopicPub().c_str());
+        }
+
+        if (!mqtt->getTopicSub().empty()) {
+            cli_.subscribe(mqtt->getTopicSub(), QOS, nullptr, subListener_);
+            SD_LOG(LOG_INFO, "subscrib to %s with QOS %d", mqtt->getTopicSub().c_str(), QOS);
+        }
     }
 
     void connection_lost(const std::string& cause) override

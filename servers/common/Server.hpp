@@ -51,7 +51,7 @@ protected:
 
 public:
     Server(Config &config, Board *board, CommandLine &cli)
-        : StateMachine(config, board, true),
+        : StateMachine(config, board),
         cryptoServer(cli),
         sediment_home(cli.getSedimentHome())
     {

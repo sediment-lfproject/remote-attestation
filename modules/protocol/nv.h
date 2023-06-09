@@ -130,6 +130,19 @@ extern "C" {
 #define NV_LEN_DOWNLOAD           4
 #define NV_OFFSET_DOWNLOAD        (NV_OFFSET_LOG_LEVEL + NV_LEN_LOG_LEVEL)
 
+
+#define NV_MQTT_URL               "mqtt_url"
+#define NV_LEN_MQTT_URL           32
+#define NV_OFFSET_MQTT_URL        (NV_OFFSET_DOWNLOAD + NV_LEN_DOWNLOAD)
+
+#define NV_MQTT_PUB_TOPIC         "mqtt_pub_topic"
+#define NV_LEN_MQTT_PUB_TOPIC     16
+#define NV_OFFSET_MQTT_PUB_TOPIC  (NV_OFFSET_MQTT_URL + NV_LEN_MQTT_URL)
+
+#define NV_MQTT_SUB_TOPIC         "mqtt_sub_topic"
+#define NV_LEN_MQTT_SUB_TOPIC     16
+#define NV_OFFSET_MQTT_SUB_TOPIC  (NV_OFFSET_MQTT_PUB_TOPIC + NV_LEN_MQTT_PUB_TOPIC)
+
 // The following are expected to be changed during device operation
 #define NV_ENC_KEY              "enc_key"
 #define NV_LEN_ENC_KEY          32
