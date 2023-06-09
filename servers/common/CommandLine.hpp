@@ -38,6 +38,7 @@ protected:
     string rsaVerificationKey = SEDIMENT DFT_RSA_VKEY;
     string database           = SEDIMENT DFT_DATABASE;
     string sediment_home      = SEDIMENT;
+    bool sigVerifier          = true;
 
     void updateHome(const char *env_p) 
     {
@@ -140,5 +141,10 @@ public:
     const string& getSedimentHome() const
     {
         return sediment_home;
+    }
+
+    bool isSigVerifier() const
+    {
+        return sigVerifier;
     }
 };

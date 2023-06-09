@@ -244,8 +244,10 @@ bool Prover::moveTo(MessageID id, Message *received)
     case DATA:
         to_send = prepareData(received);
 
-        if (config.getTransport() == TRANSPORT_SEDIMENT_MQTT)
+        if (config.getTransport() == TRANSPORT_SEDIMENT_MQTT) {
             towait = false;
+            cause = CAUSE_PERIODIC;
+        }
         else
             expecting = RESULT;
         break;
