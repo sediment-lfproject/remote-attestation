@@ -25,6 +25,9 @@ Item attested_items[] = {
     { NV_NUM_CYCLES,       NV_OFFSET_NUM_CYCLES,       NV_LEN_NUM_CYCLES,       NV_TYPE_INT                 },
     { NV_ITERATIONS,       NV_OFFSET_ITERATIONS,       NV_LEN_ITERATIONS,       NV_TYPE_INT                 },
     { NV_AUTHENTICATION,   NV_OFFSET_AUTHENTICATION,   NV_LEN_AUTHENTICATION,   NV_TYPE_BOOL                },
+    { NV_MQTT_URL,         NV_OFFSET_MQTT_URL,         NV_LEN_MQTT_URL,         NV_TYPE_CHAR                },
+    { NV_MQTT_PUB_TOPIC,   NV_OFFSET_MQTT_PUB_TOPIC,   NV_LEN_MQTT_PUB_TOPIC,   NV_TYPE_CHAR                },
+    { NV_MQTT_SUB_TOPIC,   NV_OFFSET_MQTT_SUB_TOPIC,   NV_LEN_MQTT_SUB_TOPIC,   NV_TYPE_CHAR                },
 
     { NV_ENC_KEY,          NV_OFFSET_ENC_KEY,          NV_LEN_ENC_KEY,          NV_TYPE_BYTE                },
     { NV_ATTEST_KEY,       NV_OFFSET_ATTEST_KEY,       NV_LEN_ATTEST_KEY,       NV_TYPE_BYTE                },

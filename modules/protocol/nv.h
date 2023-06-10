@@ -130,7 +130,6 @@ extern "C" {
 #define NV_LEN_DOWNLOAD           4
 #define NV_OFFSET_DOWNLOAD        (NV_OFFSET_LOG_LEVEL + NV_LEN_LOG_LEVEL)
 
-
 #define NV_MQTT_URL               "mqtt_url"
 #define NV_LEN_MQTT_URL           32
 #define NV_OFFSET_MQTT_URL        (NV_OFFSET_DOWNLOAD + NV_LEN_DOWNLOAD)

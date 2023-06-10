@@ -313,13 +313,28 @@ public:
         return mqttUrl;
     }
 
+    void setMqttUrl(string &mqttUrl)
+    {
+        this->mqttUrl = mqttUrl;
+    }
+
     const string& getTopicPub()
     {
         return topicPub;
     }
 
+    void setTopicPub(string &topicPub)
+    {
+        this->topicPub = topicPub;
+    }    
+
     const string& getTopicSub()
     {
         return topicSub;
-    }    
+    }
+
+    void setTopicSub(string &topicSub)
+    {
+        this->topicSub = topicSub;
+    }   
 };
