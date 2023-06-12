@@ -38,7 +38,7 @@ void Prover::run()
     seecSqn = board->getSeecSqn();
 
     if (config.getTransport() == TRANSPORT_SEDIMENT_MQTT) {
-        string url = endpoint.getAddress();
+        string url = config.getMqttUrl();
         bool ok    = mqtt.connect(url, config.getComponent().getID());
         if (!ok)
             return;

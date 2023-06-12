@@ -88,7 +88,7 @@ protected:
 
 public:
     Prover(Config &config, Board *board)
-        : StateMachine(config, board, false),
+        : StateMachine(config, board),
         seec(config)
     {
 #ifdef PLATFORM_RPI

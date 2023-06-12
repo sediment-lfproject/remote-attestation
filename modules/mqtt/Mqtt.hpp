@@ -17,17 +17,16 @@ using namespace std;
 class Mqtt
 {
 private:
-    string topicPub       = "sensor";
-    string topicSub       = "control";
+    string topicPub;
+    string topicSub;
     StateMachine *machine = NULL;
 
 public:
-    Mqtt(bool server, StateMachine *machine)
+    Mqtt(const string &pub, const string &sub, StateMachine *machine)
     {
-        if (server) {
-            topicPub = "control";
-            topicSub = "sensor";
-        }
+        topicPub = pub;
+        topicSub = sub;
+        SD_LOG(LOG_ERR, "%s", topicPub.c_str());
         this->machine = machine;
     }
 

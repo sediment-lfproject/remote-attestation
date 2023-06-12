@@ -43,10 +43,10 @@ protected:
     virtual void setTimestamp(Message *message) = 0;
 
 public:
-    StateMachine(Config &config, Board *board, bool server) :
+    StateMachine(Config &config, Board *board) :
         config(config),
         board(board),
-        mqtt(server, this)
+        mqtt(config.getTopicPub(), config.getTopicSub(), this)
     {
         board->setId(config.getComponent().getID());
     }
