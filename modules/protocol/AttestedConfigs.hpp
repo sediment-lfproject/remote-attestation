@@ -33,8 +33,11 @@ Item attested_items[] = {
     { NV_PARAMS_SIZE,      NV_OFFSET_PARAMS_SIZE,      NV_LEN_PARAMS_SIZE,      NV_TYPE_INT                 },
     { NV_PARAMS,           NV_OFFSET_PARAMS,           NV_LEN_PARAMS,           NV_TYPE_BLOCK               },
 
-    { NV_URIPATH_SIZE,     NV_OFFSET_URIPATH_SIZE,     NV_LEN_URIPATH_SIZE,     NV_TYPE_INT                 },
-    { NV_URIPATH,          NV_OFFSET_URIPATH,          NV_LEN_URIPATH,          NV_TYPE_BLOCK               },
+    { NV_EURIPATH_SIZE,    NV_OFFSET_EURIPATH_SIZE,    NV_LEN_EURIPATH_SIZE,    NV_TYPE_INT                 },
+    { NV_EURIPATH,         NV_OFFSET_EURIPATH,         NV_LEN_EURIPATH,         NV_TYPE_BLOCK               },
+
+    { NV_SURIPATH_SIZE,    NV_OFFSET_SURIPATH_SIZE,    NV_LEN_SURIPATH_SIZE,    NV_TYPE_INT                 },
+    { NV_SURIPATH,         NV_OFFSET_SURIPATH,         NV_LEN_SURIPATH,         NV_TYPE_BLOCK               },
 
     { NV_TIMEPATH_SIZE,    NV_OFFSET_TIMEPATH_SIZE,    NV_LEN_TIMEPATH_SIZE,    NV_TYPE_INT                 },
     { NV_TIMEPATH,         NV_OFFSET_TIMEPATH,         NV_LEN_TIMEPATH,         NV_TYPE_BLOCK               },

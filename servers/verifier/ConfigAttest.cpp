@@ -80,7 +80,8 @@ bool isMultiline(string key)
     return !(key.compare(NV_PARAMS) &&
            key.compare(NV_ENCRYPTKEY) &&
            key.compare(NV_SIGNKEY) &&
-           key.compare(NV_URIPATH) &&
+           key.compare(NV_EURIPATH) &&
+           key.compare(NV_SURIPATH) &&
            key.compare(NV_TIMEPATH));
 }
 

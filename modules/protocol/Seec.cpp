@@ -91,4 +91,21 @@ void Seec::decryptKey(KeyBox &keyBox)
     }
 }
 
+void Seec::revocation(Vector &payload)
+{
+    KeyEncType keyEncType = config.getKeyDistMethod();
+
+    switch(keyEncType) {
+    case KEY_ENC_TYPE_JEDI:
+        jedi.revocation(payload);
+        break;
+    case KEY_ENC_TYPE_RSA:
+        SD_LOG(LOG_ERR, "revocation not supported for RSA!");
+        break;
+    default:
+        SD_LOG(LOG_ERR, "unsupported key encryption type: %s", TO_KEY_ENC_TYPE(keyEncType).c_str());
+        break;
+    }
+}
+
 #endif // ifdef SEEC_ENABLED

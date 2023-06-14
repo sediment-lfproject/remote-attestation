@@ -145,14 +145,23 @@ bool Config::parseTopLevel(bool isProver, string &key, string &value)
         else
             Utils::readHex(Subscribe::getParams(), value, value.size() / 2);
     }
-    else if (!key.compare(NV_URIPATH_SIZE)) {
+    else if (!key.compare(NV_EURIPATH_SIZE)) {
         // size = stoi(value);
     }
-    else if (!key.compare(NV_URIPATH)) {
+    else if (!key.compare(NV_EURIPATH)) {
         if (isProver)
-            Utils::readHex(Publish::getUripath(), value, value.size() / 2);
+            Utils::readHex(Publish::getEncryptUripath(), value, value.size() / 2);
         else
-            Utils::readHex(Subscribe::getUripath(), value, value.size() / 2);
+            Utils::readHex(Subscribe::getEncryptUripath(), value, value.size() / 2);
+    }
+    else if (!key.compare(NV_SURIPATH_SIZE)) {
+        // size = stoi(value);
+    }
+    else if (!key.compare(NV_SURIPATH)) {
+        if (isProver)
+            Utils::readHex(Publish::getSignUripath(), value, value.size() / 2);
+        else
+            Utils::readHex(Subscribe::getSignUripath(), value, value.size() / 2);
     }
     else if (!key.compare(NV_TIMEPATH_SIZE)) {
         // size = stoi(value);
@@ -247,8 +256,10 @@ bool isOptional(string key)
            key.compare(NV_ENCRYPTKEY) &&
            key.compare(NV_SIGNKEY) &&
            key.compare(NV_SIGNKEY_SIZE) &&
-           key.compare(NV_URIPATH) &&
-           key.compare(NV_URIPATH_SIZE) &&
+           key.compare(NV_EURIPATH) &&
+           key.compare(NV_EURIPATH_SIZE) &&
+           key.compare(NV_SURIPATH) &&
+           key.compare(NV_SURIPATH_SIZE) &&
            key.compare(NV_TIMEPATH) &&
            key.compare(NV_TIMEPATH_SIZE));
 }

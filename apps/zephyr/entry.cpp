@@ -197,10 +197,16 @@ static void reload_flash(Prover &prover)
     if (reload_to_vec(NV_PARAMS, Publish::getParams(), size) != 0)
         return;
 
-    if (reload(NV_URIPATH_SIZE, sizeof(int), (uint8_t *) &size) != 0)
+    if (reload(NV_EURIPATH_SIZE, sizeof(int), (uint8_t *) &size) != 0)
         return;
 
-    if (reload_to_vec(NV_URIPATH, Publish::getUripath(), size) != 0)
+    if (reload_to_vec(NV_EURIPATH, Publish::getEncryptUripath(), size) != 0)
+        return;
+
+    if (reload(NV_SURIPATH_SIZE, sizeof(int), (uint8_t *) &size) != 0)
+        return;
+
+    if (reload_to_vec(NV_SURIPATH, Publish::getSignUripath(), size) != 0)
         return;
 
     if (reload(NV_TIMEPATH_SIZE, sizeof(int), (uint8_t *) &size) != 0)

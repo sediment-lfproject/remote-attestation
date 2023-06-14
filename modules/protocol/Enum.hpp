@@ -35,7 +35,11 @@ enum MessageID {
 
     CONFIG              = 14,
 
-    MAX_MSG_ID          = 15,
+    REVOCATION          = 15,   // Used to inform Subscribers of Subscriber Revocation(s)
+    REVOCATION_CHECK    = 16,   // Used by Publishers to check for Subscriber Revocation(s) before publishing
+    REVOCATION_ACK      = 17,   // Response to Publishers, informing about Subscriber Revocation(s)
+
+    MAX_MSG_ID          = 18,
 };
 
 enum Reason {

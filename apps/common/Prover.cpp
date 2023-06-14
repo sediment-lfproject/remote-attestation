@@ -238,16 +238,35 @@ bool Prover::moveTo(MessageID id, Message *received)
         break;
     case KEY_CHANGE:
         to_send   = prepareKeyChange(received);
+#if defined(SEEC_ENABLED)
+        expecting = REVOCATION_CHECK; // if SEEC is enabled, check for Revocation(s) before preparing data
+#else
         expecting = DATA; // no response, just move to the next procedure
+#endif
         towait    = false;
+        break;
+    case REVOCATION_CHECK:
+        SD_LOG(LOG_DEBUG, "REVOCATION_CHECK NOT implemented yet!");
+        expecting = REVOCATION_ACK;
+        towait = false;
+        break;
+    case REVOCATION_ACK:
+        SD_LOG(LOG_DEBUG, "REVOCATION_ACK NOT implemented yet!");
+        expecting = DATA;  // no response, just move to the next procedure
+        towait = false;
         break;
     case DATA:
         to_send = prepareData(received);
 
-        if (config.getTransport() == TRANSPORT_SEDIMENT_MQTT)
+        if (config.getTransport() == TRANSPORT_SEDIMENT_MQTT){
+#if defined(SEEC_ENABLED)
+            expecting = REVOCATION_CHECK; // if SEEC is enabled, check for Revocation(s) before preparing data next time
+#endif
             towait = false;
-        else
+        }
+        else{
             expecting = RESULT;
+        }
         break;
     default:
         if (received != NULL)
@@ -998,6 +1017,10 @@ void Prover::resetProcedure(bool fullReset)
     case EVIDENCE:
     case GRANT:
         expecting = ATTESTATION_REQUEST;
+        break;
+    case REVOCATION_CHECK:
+    case REVOCATION_ACK:
+        expecting = REVOCATION_CHECK;
         break;
     case DATA:
     case RESULT:

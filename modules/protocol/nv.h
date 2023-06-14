@@ -147,17 +147,25 @@ extern "C" {
 #define NV_LEN_PARAMS           1024
 #define NV_OFFSET_PARAMS        (NV_OFFSET_PARAMS_SIZE + NV_LEN_PARAMS_SIZE)
 
-#define NV_URIPATH_SIZE         "uripath_size"
-#define NV_LEN_URIPATH_SIZE     4
-#define NV_OFFSET_URIPATH_SIZE  (NV_OFFSET_PARAMS + NV_LEN_PARAMS)
+#define NV_EURIPATH_SIZE         "euripath_size"
+#define NV_LEN_EURIPATH_SIZE     4
+#define NV_OFFSET_EURIPATH_SIZE  (NV_OFFSET_PARAMS + NV_LEN_PARAMS)
 
-#define NV_URIPATH              "uripath"
-#define NV_LEN_URIPATH          64
-#define NV_OFFSET_URIPATH       (NV_OFFSET_URIPATH_SIZE + NV_LEN_URIPATH_SIZE)
+#define NV_EURIPATH              "euripath"
+#define NV_LEN_EURIPATH          64
+#define NV_OFFSET_EURIPATH       (NV_OFFSET_EURIPATH_SIZE + NV_LEN_EURIPATH_SIZE)
+
+#define NV_SURIPATH_SIZE         "suripath_size"
+#define NV_LEN_SURIPATH_SIZE     4
+#define NV_OFFSET_SURIPATH_SIZE  (NV_OFFSET_EURIPATH + NV_LEN_EURIPATH)
+
+#define NV_SURIPATH              "suripath"
+#define NV_LEN_SURIPATH          64
+#define NV_OFFSET_SURIPATH       (NV_OFFSET_SURIPATH_SIZE + NV_LEN_SURIPATH_SIZE)
 
 #define NV_TIMEPATH_SIZE        "timepath_size"
 #define NV_LEN_TIMEPATH_SIZE    4
-#define NV_OFFSET_TIMEPATH_SIZE (NV_OFFSET_URIPATH + NV_LEN_URIPATH)
+#define NV_OFFSET_TIMEPATH_SIZE (NV_OFFSET_SURIPATH + NV_LEN_SURIPATH)
 
 #define NV_TIMEPATH             "timepath"
 #define NV_LEN_TIMEPATH         16

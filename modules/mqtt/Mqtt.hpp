@@ -19,6 +19,7 @@ class Mqtt
 private:
     string topicPub       = "sensor";
     string topicSub       = "control";
+    string topicRev       = "revocation"; // Topic used for Revocation
     StateMachine *machine = NULL;
 
 public:
@@ -44,5 +45,10 @@ public:
     string &getTopicPub()
     {
         return topicPub;
+    }
+
+    string &getTopicRev()
+    {
+        return topicRev;
     }
 };

@@ -391,3 +391,19 @@ void Alert::encode(Vector &data)
     Codec::putInt(signature.size(), data, SIGNATURE_LEN_LEN);
     Codec::putByteArray(data, signature);
 }
+
+void Revocation::decode(Vector &data)
+{
+    Message::decode(data);
+
+    int payload_size = Codec::getInt(data, PAYLOAD_SIZE_LEN);
+    Codec::getByteArray(data, payload_size, payload);
+}
+
+void Revocation::encode(Vector &data)
+{
+    Message::encode(data);
+
+    Codec::putInt(payload.size(), data, PAYLOAD_SIZE_LEN);
+    Codec::putByteArray(data, payload);
+}

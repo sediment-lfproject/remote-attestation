@@ -1064,3 +1064,38 @@ public:
         this->endpoint.copy(endpoint);
     }
 };
+
+class Revocation : public Message
+{
+protected:
+    Vector payload;
+
+public:
+    Revocation()
+        : Message(REVOCATION)
+    { }
+
+    virtual ~Revocation(){ }
+
+    void decode(Vector &data);
+    void encode(Vector &data);
+
+    uint32_t getSize()
+    {
+        return Message::getSize()
+            + PAYLOAD_SIZE_LEN
+            + payload.size();
+    }
+
+    string toString()
+    {
+       return SD_TO_STRING(
+            Message::toString()
+            + "\npayload: " + Log::toHex(payload));
+    }
+
+    Vector &getPayload()
+    {
+        return payload;
+    }
+};

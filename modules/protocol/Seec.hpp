@@ -67,6 +67,7 @@ public:
     void decryptData(Vector &iv, Vector &payload, Board *board, MeasurementList &measList, string &deviceID, uint32_t &seecSqn);
     void encryptKey(KeyBox &keyBox, Board *board, MeasurementList &measList, string &deviceID);
     void decryptKey(KeyBox &keyBox);
+    void revocation(Vector &payload);
 #endif
 
     Crypto * getCrypto()
