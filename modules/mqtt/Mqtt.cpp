@@ -54,7 +54,8 @@ void Mqtt::publish(char *message)
         mqtt::token_ptr tok = top->publish(message);
         tok->wait(); // Just wait for the last one to complete.
 
-        SD_LOG(LOG_DEBUG, "MQTT published %s", message);
+        // SD_LOG(LOG_DEBUG, "MQTT published %s", message);
+        SD_LOG(LOG_DEBUG, "MQTT published len=%d", strlen(message));
     }
     catch (const mqtt::exception& exc) {
         SD_LOG(LOG_ERR, "MQTT::publish(): %s", exc.what());

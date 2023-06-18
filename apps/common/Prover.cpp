@@ -38,7 +38,7 @@ void Prover::run()
     seecSqn = board->getSeecSqn();
 
     if (config.getTransport() == TRANSPORT_SEDIMENT_MQTT) {
-        string url = endpoint.getAddress();
+        string url = config.getMqttUrl();
         bool ok    = mqtt.connect(url, config.getComponent().getID());
         if (!ok)
             return;
@@ -258,13 +258,14 @@ bool Prover::moveTo(MessageID id, Message *received)
     case DATA:
         to_send = prepareData(received);
 
-        if (config.getTransport() == TRANSPORT_SEDIMENT_MQTT){
+        if (config.getTransport() == TRANSPORT_SEDIMENT_MQTT) {
 #if defined(SEEC_ENABLED)
             expecting = REVOCATION_CHECK; // if SEEC is enabled, check for Revocation(s) before preparing data next time
 #endif
             towait = false;
+            cause = CAUSE_PERIODIC;
         }
-        else{
+        else {
             expecting = RESULT;
         }
         break;

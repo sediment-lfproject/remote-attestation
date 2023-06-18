@@ -157,6 +157,21 @@ static void reload_flash(Prover &prover)
         config.setTransport(dataTx);
     }
 
+    if (reload(NV_MQTT_URL, sizeof(buf), buf) == 0) {
+        string url((char *) buf);
+        config.setMqttUrl(url);
+    }
+
+    if (reload(NV_MQTT_PUB_TOPIC, sizeof(buf), buf) == 0) {
+        string pub((char *) buf);
+        config.setTopicPub(pub);
+    }
+
+    if (reload(NV_MQTT_SUB_TOPIC, sizeof(buf), buf) == 0) {
+        string sub((char *) buf);
+        config.setTopicSub(pub);
+    }
+
     uint8_t enckey[Crypto::ENC_KEY_BYTES];
     if (reload(NV_ENC_KEY, sizeof(enckey), enckey) == 0) {
         Seec &seec     = prover.getSeec();

@@ -30,20 +30,19 @@ void Seec::encryptData(Vector &iv, Vector &payload, int message_size, Measuremen
     }
 }
 
-void Seec::decryptData(Vector &iv, Vector &payload, Board *board, MeasurementList &measList, string &deviceID, uint32_t &seecSqn)
+bool Seec::decryptData(Vector &iv, Vector &payload, Board *board, MeasurementList &measList, 
+                       string &deviceID, uint32_t &seecSqn, bool sigVerifier)
 {
     KeyEncType keyEncType = config.getKeyDistMethod();
 
     switch (keyEncType) {
     case KEY_ENC_TYPE_JEDI:
-        jedi.decryptData(iv, payload, board, measList, deviceID, seecSqn);
-        break;
+        return jedi.decryptData(iv, payload, board, measList, deviceID, seecSqn, sigVerifier);
     case KEY_ENC_TYPE_RSA:
-        rsa.decryptData(iv, payload, board, measList, deviceID);
-        break;
+        return rsa.decryptData(iv, payload, board, measList, deviceID);
     default:
         SD_LOG(LOG_ERR, "unsupported key encryption type: %s", TO_KEY_ENC_TYPE(keyEncType).c_str());
-        break;
+        return false;
     }
 }
 

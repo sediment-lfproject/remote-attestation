@@ -92,13 +92,21 @@ class callback : public virtual mqtt::callback
     {
         (void) cause;
         ok = true;
+
         SD_LOG(LOG_INFO, "MQTT connected");
+        if (!mqtt->getTopicPub().empty()) {
+            SD_LOG(LOG_INFO, "publish to %s", mqtt->getTopicPub().c_str());
+        }
 
-        cli_.subscribe(mqtt->getTopicSub(), QOS, nullptr, subListener_);
-        SD_LOG(LOG_INFO, "MQTT subscribes to %s with QOS %d", mqtt->getTopicSub().c_str(), QOS);
+        if (!mqtt->getTopicSub().empty()) {
+            cli_.subscribe(mqtt->getTopicSub(), QOS, nullptr, subListener_);
+            SD_LOG(LOG_INFO, "subscribe to %s with QOS %d", mqtt->getTopicSub().c_str(), QOS);
+        }
 
-        cli_.subscribe(mqtt->getTopicRev(), QOS, nullptr, subListener_);
-        SD_LOG(LOG_INFO, "MQTT subscribes to %s with QOS %d", mqtt->getTopicRev().c_str(), QOS);
+        if (!mqtt->getTopicRev().empty()) {
+            cli_.subscribe(mqtt->getTopicRev(), QOS, nullptr, subListener_);
+            SD_LOG(LOG_INFO, "subscribe to %s with QOS %d", mqtt->getTopicRev().c_str(), QOS);
+        }
     }
 
     void connection_lost(const std::string& cause) override
@@ -112,7 +120,8 @@ class callback : public virtual mqtt::callback
 
     void message_arrived(mqtt::const_message_ptr msg) override
     {
-        SD_LOG(LOG_DEBUG, "MQTT message: (%s) %s", msg->get_topic().c_str(), msg->to_string().c_str());
+        // SD_LOG(LOG_DEBUG, "MQTT message: (%s) %s", msg->get_topic().c_str(), msg->to_string().c_str());
+        SD_LOG(LOG_DEBUG, "MQTT message: (%s) len=%d", msg->get_topic().c_str(), msg->to_string().size());
         mqtt->handlePubData((char *) msg->to_string().c_str());
     }
 

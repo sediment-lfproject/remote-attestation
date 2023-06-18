@@ -11,7 +11,7 @@
 
 void Prover::runMqtt()
 {
-    string url = endpoint.getAddress();
+    string url = config.getMqttUrl();
     bool ok    = mqtt.connect(url, config.getComponent().getID());
 
     if (!ok) {

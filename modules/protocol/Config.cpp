@@ -124,6 +124,15 @@ bool Config::parseTopLevel(bool isProver, string &key, string &value)
     else if (!key.compare(NV_FW_SCRIPT)) {
         fwScript = value;
     }
+    else if (!key.compare(NV_MQTT_URL)) {
+        mqttUrl = value;
+    }
+    else if (!key.compare(NV_MQTT_PUB_TOPIC)) {
+        topicPub = value;
+    }
+    else if (!key.compare(NV_MQTT_SUB_TOPIC)) {
+        topicSub = value;
+    }
     else if (!key.compare(NV_ENC_KEY)) {
         Utils::readHex(enc_key, value, value.size() / 2);
     }
