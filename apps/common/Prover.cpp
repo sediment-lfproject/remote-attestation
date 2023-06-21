@@ -42,6 +42,9 @@ void Prover::run()
         bool ok    = mqtt.connect(url, config.getComponent().getID());
         if (!ok)
             return;
+        while (!mqtt.isConnected()) {
+            board->sleepSec(1);
+        }
     }
 
     int proc_fail_count = 0;
