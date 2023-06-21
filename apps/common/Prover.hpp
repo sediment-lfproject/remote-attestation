@@ -22,7 +22,8 @@ protected:
     Passport passport;    // passport received from the verifier
     Reason reason = INIT; // reason for starting attestation
 
-    Endpoint rpEndpoint; // saved relying party endpoint
+    Endpoint rpEndpoint;  // saved relying party endpoint
+    Endpoint revEndpoint; // saved Revocation Server endpoint
     MessageID expecting = CONFIG;
     Cause cause = CAUSE_POWER_ON;
     int mySock = -1;
@@ -52,6 +53,8 @@ protected:
     Message * preparePassportCheck(Message *received);
     bool handlePermission(Message *message);
     Message * prepareKeyChange(Message *received);
+    Message * prepareRevocationCheck(Message *received);
+    bool handleRevocationAck(Message *received);
     Message * prepareData(Message *received);
     bool handleResult(Message *message);
 
@@ -98,6 +101,7 @@ public:
         
         this->endpoint.copy(*config.getComponent().getOutgoing());
         this->rpEndpoint.copy(endpoint);
+        this->revEndpoint.copy(*config.getComponent().getRevServer());
 
         Crypto *crypto = seec.getCrypto();
 
@@ -130,6 +134,14 @@ public:
         rpEndpoint.setProtocol(protocol);
         rpEndpoint.setAddress(addr);
         rpEndpoint.setPort(port);
+    }
+
+    // invoked when Revocation endpoint is loaded from flash
+    void reInitRevEndpoint(Protocol protocol, string addr, int port)
+    {
+        revEndpoint.setProtocol(protocol);
+        revEndpoint.setAddress(addr);
+        revEndpoint.setPort(port);
     }
 
 #ifdef PLATFORM_RPI

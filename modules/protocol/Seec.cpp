@@ -107,4 +107,39 @@ void Seec::revocation(Vector &payload)
     }
 }
 
+void Seec::revocationCheck(Vector &iv, Vector &payload, int message_size, MeasurementList &measList, Board *board,
+                       string &deviceID, Crypto *crypto, char *plaintext)
+{
+    KeyEncType keyEncType = config.getKeyDistMethod();
+
+    switch(keyEncType) {
+    case KEY_ENC_TYPE_JEDI:
+        jedi.revocationCheck(iv, payload, message_size, measList, board, deviceID, crypto, plaintext);
+        break;
+    case KEY_ENC_TYPE_RSA:
+        SD_LOG(LOG_ERR, "revocation check not supported for RSA!");
+        break;
+    default:
+        SD_LOG(LOG_ERR, "unsupported key encryption type: %s", TO_KEY_ENC_TYPE(keyEncType).c_str());
+        break;
+    }
+}
+
+void Seec::revocationAck(Vector &payload)
+{
+    KeyEncType keyEncType = config.getKeyDistMethod();
+
+    switch(keyEncType) {
+    case KEY_ENC_TYPE_JEDI:
+        jedi.revocationAck(payload);
+        break;
+    case KEY_ENC_TYPE_RSA:
+        SD_LOG(LOG_ERR, "revocation ack not supported for RSA!");
+        break;
+    default:
+        SD_LOG(LOG_ERR, "unsupported key encryption type: %s", TO_KEY_ENC_TYPE(keyEncType).c_str());
+        break;
+    }
+}
+
 #endif // ifdef SEEC_ENABLED

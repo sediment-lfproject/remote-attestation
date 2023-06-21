@@ -57,6 +57,7 @@ protected:
     string mqttUrl = "127.0.0.1";
     string topicPub;
     string topicSub;
+    string topicRev;
 
 public:
     Config()
@@ -336,5 +337,15 @@ public:
     void setTopicSub(string &topicSub)
     {
         this->topicSub = topicSub;
-    }   
+    }
+
+    void setTopicRev(string &topicRev)
+    {
+        this->topicRev = topicRev;
+    }
+
+    const string& getTopicRev()
+    {
+        return topicRev;
+    }
 };

@@ -194,6 +194,9 @@ bool Config::parseTopLevel(bool isProver, string &key, string &value)
         if (!isProver)
             Utils::readHex(Subscribe::getEncryptKey(), value, value.size() / 2);
     }
+    else if (!key.compare(NV_MQTT_REV_TOPIC)) {
+        topicRev = value;
+    }
 #endif // ifdef SEEC_ENABLED
     else if (isProver) {
         if (!key.compare(NV_ID)) {
@@ -223,6 +226,32 @@ bool Config::parseTopLevel(bool isProver, string &key, string &value)
             }
             endpoint->setPort(stoi(value));
         }
+#ifdef SEEC_ENABLED
+        else if (!key.compare(NV_REV_PROTOCOL)) {
+            Endpoint *endpoint = configComponent.getRevServer();
+            if (endpoint == NULL) {
+                endpoint = new Endpoint();
+                configComponent.setRevServer(endpoint);
+            }
+            endpoint->setProtocol(Endpoint::toProtocol(value));
+        }
+        else if (!key.compare(NV_REV_ADDRESS)) {
+            Endpoint *endpoint = configComponent.getRevServer();
+            if (endpoint == NULL) {
+                endpoint = new Endpoint();
+                configComponent.setRevServer(endpoint);
+            }
+            endpoint->setAddress(value);
+        }
+        else if (!key.compare(NV_REV_PORT)) {
+            Endpoint *endpoint = configComponent.getRevServer();
+            if (endpoint == NULL) {
+                endpoint = new Endpoint();
+                configComponent.setRevServer(endpoint);
+            }
+            endpoint->setPort(stoi(value));
+        }
+#endif // ifdef SEEC_ENABLED
         else
             processed = false;
     }
@@ -255,7 +284,8 @@ bool isOtherComponent(string key)
            key.compare(NV_VERIFIER) &&
            key.compare(NV_PROVER) &&
            key.compare(NV_FIREWALL) &&
-           key.compare(NV_APP_SERVER));
+           key.compare(NV_APP_SERVER) &&
+           key.compare(NV_REV_SERVER));
 }
 
 bool isOptional(string key)
@@ -270,7 +300,11 @@ bool isOptional(string key)
            key.compare(NV_SURIPATH) &&
            key.compare(NV_SURIPATH_SIZE) &&
            key.compare(NV_TIMEPATH) &&
-           key.compare(NV_TIMEPATH_SIZE));
+           key.compare(NV_TIMEPATH_SIZE) &&
+           key.compare(NV_MQTT_REV_TOPIC) &&
+           key.compare(NV_REV_PROTOCOL) &&
+           key.compare(NV_REV_ADDRESS) &&
+           key.compare(NV_REV_PORT));
 }
 
 void Config::parseFile(const string &filename)

@@ -149,6 +149,15 @@ string Log::toMessageID(MessageID id)
     case CONFIG:
         return "CONFIG";
 
+    case REVOCATION:
+        return "REVOCATION";
+
+    case REVOCATION_CHECK:
+        return "REVOCATION_CHECK";
+
+    case REVOCATION_ACK:
+        return "REVOCATION_ACK";
+
     default:
         return "BAD MESSAGE ID";
     }

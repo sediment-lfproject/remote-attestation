@@ -71,6 +71,28 @@ static void reload_endpoint(Prover &prover, uint8_t *buf, int size)
     prover.reInitEndpoints(protocol, address, port);
 }
 
+static void reload_rev_endpoint(Prover &prover, uint8_t *buf, int size)
+{
+    if (reload(NV_REV_PROTOCOL, size, buf) != 0)
+        return;
+
+    string prot((char *) buf);
+    Protocol protocol = Endpoint::toProtocol(prot);
+
+    if (reload(NV_REV_PORT, size, buf) != 0)
+        return;
+
+    int port = *(int *) buf;
+
+    if (reload(NV_REV_ADDRESS, size, buf) != 0)
+        return;
+
+    SD_LOG(LOG_INFO, "Revocation endpoint in flash: %d:%s:%d", protocol, buf, port);
+    string address((char *) buf);
+
+    prover.reInitRevEndpoint(protocol, address, port);
+}
+
 static void reload_flash(Prover &prover)
 {
     uint8_t buf[32];
@@ -205,6 +227,8 @@ static void reload_flash(Prover &prover)
             crypto->changeKey(KEY_AUTH, (unsigned char *) authkey, sizeof(authkey));
     }
 #ifdef SEEC_ENABLED
+    reload_rev_endpoint(prover, buf, sizeof(buf));
+
     int size = 0;
     if (reload(NV_PARAMS_SIZE, sizeof(int), (uint8_t *) &size) != 0)
         return;

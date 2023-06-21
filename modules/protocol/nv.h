@@ -142,10 +142,26 @@ extern "C" {
 #define NV_LEN_MQTT_SUB_TOPIC     16
 #define NV_OFFSET_MQTT_SUB_TOPIC  (NV_OFFSET_MQTT_PUB_TOPIC + NV_LEN_MQTT_PUB_TOPIC)
 
+#define NV_MQTT_REV_TOPIC         "mqtt_rev_topic"
+#define NV_LEN_MQTT_REV_TOPIC     16
+#define NV_OFFSET_MQTT_REV_TOPIC  (NV_OFFSET_MQTT_SUB_TOPIC + NV_LEN_MQTT_SUB_TOPIC)
+
+#define NV_REV_PROTOCOL           "rev_protocol"
+#define NV_LEN_REV_PROTOCOL       8
+#define NV_OFFSET_REV_PROTOCOL    (NV_OFFSET_MQTT_REV_TOPIC + NV_LEN_MQTT_REV_TOPIC)
+
+#define NV_REV_ADDRESS            "rev_address"
+#define NV_LEN_REV_ADDRESS        32
+#define NV_OFFSET_REV_ADDRESS     (NV_OFFSET_REV_PROTOCOL + NV_LEN_REV_PROTOCOL)
+
+#define NV_REV_PORT               "rev_port"
+#define NV_LEN_REV_PORT           4
+#define NV_OFFSET_REV_PORT        (NV_OFFSET_REV_ADDRESS + NV_LEN_REV_ADDRESS)
+
 // The following are expected to be changed during device operation
 #define NV_ENC_KEY              "enc_key"
 #define NV_LEN_ENC_KEY          32
-#define NV_OFFSET_ENC_KEY       (NV_OFFSET_DOWNLOAD + NV_LEN_DOWNLOAD)
+#define NV_OFFSET_ENC_KEY       (NV_OFFSET_REV_PORT + NV_LEN_REV_PORT)
 
 #define NV_ATTEST_KEY           "attest_key"
 #define NV_LEN_ATTEST_KEY       32
@@ -199,6 +215,7 @@ extern "C" {
 #define NV_VERIFIER             "verifier"
 #define NV_FIREWALL             "firewall"
 #define NV_APP_SERVER           "appServer"
+#define NV_REV_SERVER           "revServer"
 #define NV_COMMENT              "comment"
 #define NV_FW_SCRIPT            "fwScript"
 

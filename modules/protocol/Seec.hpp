@@ -69,6 +69,9 @@ public:
     void encryptKey(KeyBox &keyBox, Board *board, MeasurementList &measList, string &deviceID);
     void decryptKey(KeyBox &keyBox);
     void revocation(Vector &payload);
+    void revocationCheck(Vector &iv, Vector &payload, int message_size, MeasurementList &measList,
+                     Board *board, string &deviceID, Crypto *crypto, char *plaintext);
+    void revocationAck(Vector &payload);
 #endif
 
     Crypto * getCrypto()

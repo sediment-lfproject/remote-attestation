@@ -22,6 +22,7 @@ private:
     Endpoint *outgoing  = NULL;
     Endpoint *aService  = NULL; // verifier attestation service
     Endpoint *outgoing2 = NULL;
+    Endpoint *revServer = NULL; // Revocation Server
 
 public:
     ConfigComponent()
@@ -34,7 +35,8 @@ public:
             + "\tincoming: " + (incoming == NULL ? "" : incoming->toStringOneline()) + "\n"
             + "\toutgoing: " + (outgoing == NULL ? "" : outgoing->toStringOneline()) + "\n"
             + "\toutgoing2: " + (outgoing2 == NULL ? "" : outgoing2->toStringOneline()) + "\n"
-            + "\taService: " + (aService == NULL ? "" : aService->toStringOneline()) + "\n");
+            + "\taService: " + (aService == NULL ? "" : aService->toStringOneline()) + "\n"
+            + "\trevServer: " + (revServer == NULL ? "" : revServer->toStringOneline()) + "\n");
     }
 
     Endpoint * getIncoming()
@@ -55,6 +57,11 @@ public:
     Endpoint * getAService()
     {
         return aService;
+    }
+
+    Endpoint * getRevServer()
+    {
+        return revServer;
     }
 
     string &getID()
@@ -85,5 +92,10 @@ public:
     void setOutgoing2(Endpoint *outgoing2)
     {
         this->outgoing2 = outgoing2;
+    }
+
+    void setRevServer(Endpoint *revServer)
+    {
+        this->revServer = revServer;
     }
 };

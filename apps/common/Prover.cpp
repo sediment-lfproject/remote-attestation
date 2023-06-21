@@ -28,6 +28,7 @@ using namespace std;
 #define RA_PORT          8899 // TODO: on-deman RA
 
 static bool isAttestation(MessageID id);
+static bool isRevocation(MessageID id);
 
 static int full_reset_count = 0;
 static bool proc_completed  = false;
@@ -49,6 +50,9 @@ void Prover::run()
         Endpoint *ep;
         if (isAttestation(expecting)) {
             ep = &endpoint;
+        }
+        else if (isRevocation(expecting)) {
+            ep = &revEndpoint;
         }
         else {
             ep = &rpEndpoint;
@@ -246,9 +250,13 @@ bool Prover::moveTo(MessageID id, Message *received)
         towait    = false;
         break;
     case REVOCATION_CHECK:
-        SD_LOG(LOG_DEBUG, "REVOCATION_CHECK NOT implemented yet!");
+#if defined(SEEC_ENABLED)
+        to_send   = prepareRevocationCheck(received);
         expecting = REVOCATION_ACK;
+#else
+        expecting = DATA;
         towait = false;
+#endif
         break;
     case REVOCATION_ACK:
         SD_LOG(LOG_DEBUG, "REVOCATION_ACK NOT implemented yet!");
@@ -257,17 +265,13 @@ bool Prover::moveTo(MessageID id, Message *received)
         break;
     case DATA:
         to_send = prepareData(received);
-
-        if (config.getTransport() == TRANSPORT_SEDIMENT_MQTT) {
 #if defined(SEEC_ENABLED)
-            expecting = REVOCATION_CHECK; // if SEEC is enabled, check for Revocation(s) before preparing data next time
+        expecting = REVOCATION_CHECK; // if SEEC is enabled, check for Revocation(s) before preparing data next time
+#else
+        expecting = RESULT;
 #endif
-            towait = false;
-            cause = CAUSE_PERIODIC;
-        }
-        else {
-            expecting = RESULT;
-        }
+        towait = false;
+        cause = CAUSE_PERIODIC;
         break;
     default:
         if (received != NULL)
@@ -308,6 +312,9 @@ bool Prover::handleMessage(Message *message)
 
     case RESULT:
         return handleResult(message);
+
+    case REVOCATION_ACK:
+        return handleRevocationAck(message);
 
     default:
         SD_LOG(LOG_ERR, "unexpected message received %s", message->toString().c_str());
@@ -631,6 +638,74 @@ Message * Prover::prepareKeyChange(Message *received)
 
 #else // ifdef SEEC_ENABLED
     SD_LOG(LOG_ERR, "KEY CHANGE disabled");
+    return NULL;
+
+#endif // ifdef SEEC_ENABLED
+}
+
+Message *Prover::prepareRevocationCheck(Message *received)
+{
+    (void) received;
+#ifdef SEEC_ENABLED
+    Data *data = new Data();
+
+    Crypto *crypto = seec.getCrypto();
+    if (crypto == NULL) {
+        SD_LOG(LOG_ERR, "null crypto");
+        return NULL;
+    }
+
+    const int message_size = config.getPayloadSize();
+    char message[message_size];
+    memset(message, '_', message_size);  // pad the buffer
+    message[message_size - 1] = '\0';
+
+    Vector &payload = data->getPayload();
+    MeasurementList &measList = data->getMeasurementList();
+
+    seec.revocationCheck(data->getIv(), data->getPayload(), message_size, measList, board,
+                         config.getComponent().getID(), crypto, message);
+
+    Vector &cksum = data->getChecksum();
+    if (config.isSigningEnabled()) {
+        cksum.resize(Crypto::DATA_CHECKSUM_BYTES);
+        Block blocks[] = {
+                { .block = payload.at(0),  .size = (int) payload.size() },
+        };
+        uint64_t start_time = board->getTimeInstant();
+        crypto->checksum(KEY_AUTH, blocks, sizeof(blocks) / sizeof(Block), cksum.at(0),
+                         Crypto::DATA_CHECKSUM_BYTES);
+        uint32_t elapsed = board->getElapsedTime(start_time);
+        measList.add(MEAS_HMAC_SIGNING, elapsed, payload.size());
+        cksum.inc(Crypto::DATA_CHECKSUM_BYTES);
+    }
+    else {
+        cksum.resize(0);
+    }
+
+    return data;
+
+#else // ifdef SEEC_ENABLED
+    SD_LOG(LOG_ERR, "Revocation Check disabled");
+    return NULL;
+
+#endif // ifdef SEEC_ENABLED
+}
+
+bool Prover::handleRevocationAck(Message *received)
+{
+#ifdef SEEC_ENABLED
+    MessageID id = received->getId();
+    if (id != REVOCATION_ACK) {
+        SD_LOG(LOG_ERR, "expecting Revocation Acknowledgement, received %s", received->idToString().c_str());
+        return false;
+    }
+
+    expecting = DATA;
+    return true;
+
+#else // ifdef SEEC_ENABLED
+    SD_LOG(LOG_ERR, "Revocation Acknowledgement disabled");
     return NULL;
 
 #endif // ifdef SEEC_ENABLED
@@ -1000,6 +1075,16 @@ static bool isAttestation(MessageID id)
     }
 }
 
+static bool isRevocation(MessageID id)
+{
+    switch(id) {
+    case REVOCATION_CHECK:
+        return true;
+    default:
+        return false;
+    }
+}
+
 void Prover::resetProcedure(bool fullReset)
 {
     if (fullReset) {
@@ -1021,11 +1106,9 @@ void Prover::resetProcedure(bool fullReset)
         break;
     case REVOCATION_CHECK:
     case REVOCATION_ACK:
-        expecting = REVOCATION_CHECK;
-        break;
     case DATA:
     case RESULT:
-        expecting = DATA;
+        expecting = REVOCATION_CHECK;
         break;
     case PASSPORT_CHECK:
     case PERMISSION:
