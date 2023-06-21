@@ -94,6 +94,7 @@ class callback : public virtual mqtt::callback
         ok = true;
 
         SD_LOG(LOG_INFO, "MQTT connected");
+        mqtt->setConnected(true);
         if (!mqtt->getTopicPub().empty()) {
             SD_LOG(LOG_INFO, "publish to %s", mqtt->getTopicPub().c_str());
         }
@@ -108,6 +109,7 @@ class callback : public virtual mqtt::callback
     {
         SD_LOG(LOG_ERR, "MQTT connection lost: %s", !cause.empty() ? cause.c_str() : "unknown reason");
         SD_LOG(LOG_DEBUG, "MQTT reconnecting...");
+        mqtt->setConnected(false);
 
         nretry_ = 0;
         reconnect();
