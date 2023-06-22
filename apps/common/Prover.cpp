@@ -192,6 +192,9 @@ Message * Prover::decodeMessage(uint8_t dataArray[], uint32_t len)
     case PERMISSION:
         message = new Permission();
         break;
+    case REVOCATION_ACK:
+        message = new Data();
+        break;
     case RESULT:
         message = new Result();
         break;
@@ -648,6 +651,7 @@ Message *Prover::prepareRevocationCheck(Message *received)
     (void) received;
 #ifdef SEEC_ENABLED
     Data *data = new Data();
+    data->setId(REVOCATION_CHECK);
 
     Crypto *crypto = seec.getCrypto();
     if (crypto == NULL) {
