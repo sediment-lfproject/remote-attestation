@@ -629,6 +629,9 @@ void Verifier::sendAlert(Reason reason, string deviceID, EndpointSock *src)
 
 void Verifier::publish(Evidence *evidence, bool verified)
 {
+    if (noGUI)
+        return;
+        
     int pub_sock = Comm::connectTcp(guiEndpoint);
 
     if (pub_sock < 0) {

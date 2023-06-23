@@ -39,6 +39,7 @@ protected:
     string database           = SEDIMENT DFT_DATABASE;
     string sediment_home      = SEDIMENT;
     bool sigVerifier          = true;
+    bool noGUI                = false;
 
     void updateHome(const char *env_p) 
     {
@@ -146,5 +147,10 @@ public:
     bool isSigVerifier() const
     {
         return sigVerifier;
+    }
+
+    bool isNoGUI() const
+    {
+        return noGUI;
     }
 };
