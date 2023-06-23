@@ -20,6 +20,7 @@ class Server : public StateMachine
 protected:
     CryptoServer cryptoServer;
     string sediment_home;
+    bool noGUI = false;
 
     void runProcedure(EndpointSock *epSock);
 
@@ -53,7 +54,8 @@ public:
     Server(Config &config, Board *board, CommandLine &cli)
         : StateMachine(config, board),
         cryptoServer(cli),
-        sediment_home(cli.getSedimentHome())
+        sediment_home(cli.getSedimentHome()),
+        noGUI(cli.isNoGUI())
     {
         Device::open(cli.getDatabase());
     }

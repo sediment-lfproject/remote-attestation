@@ -27,7 +27,6 @@ public:
     {
         topicPub = pub;
         topicSub = sub;
-        SD_LOG(LOG_ERR, "%s", topicPub.c_str());
         this->machine = machine;
     }
 
