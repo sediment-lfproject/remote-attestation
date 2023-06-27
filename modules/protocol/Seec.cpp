@@ -125,13 +125,13 @@ void Seec::revocationCheck(Vector &iv, Vector &payload, int message_size, Measur
     }
 }
 
-void Seec::revocationAck(Vector &payload)
+void Seec::revocationAck(Vector &iv, Vector &payload, Board *board, MeasurementList &measList)
 {
     KeyEncType keyEncType = config.getKeyDistMethod();
 
     switch(keyEncType) {
     case KEY_ENC_TYPE_JEDI:
-        jedi.revocationAck(payload);
+        jedi.revocationAck(iv, payload, board, measList);
         break;
     case KEY_ENC_TYPE_RSA:
         SD_LOG(LOG_ERR, "revocation ack not supported for RSA!");

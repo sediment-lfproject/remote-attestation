@@ -705,6 +705,18 @@ bool Prover::handleRevocationAck(Message *received)
         return false;
     }
 
+    Crypto *crypto = seec.getCrypto();
+    if (crypto == NULL) {
+        SD_LOG(LOG_ERR, "null crypto");
+        return NULL;
+    }
+
+    Data *data = (Data *) received;
+
+    MeasurementList &measList = data->getMeasurementList();
+
+    seec.revocationAck(data->getIv(), data->getPayload(), board, measList);
+
     expecting = DATA;
     return true;
 
