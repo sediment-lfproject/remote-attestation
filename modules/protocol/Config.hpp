@@ -77,17 +77,18 @@ public:
 
     string toString()
     {
+        // this is used to download a config string to the prover, if configured.
         return SD_TO_STRING(
-            NV_KEY_DIST        " " + TO_KEY_ENC_TYPE(key_dist) + "\n"
-            + NV_REPORT_INTVL    " " + to_string(report_interval) + "\n"
-            + NV_KEY_CHG_INTVL   " " + to_string(key_change_interval) + "\n"
+            // NV_KEY_DIST        " " + TO_KEY_ENC_TYPE(key_dist) + "\n"  // obsolete
+            NV_REPORT_INTVL    " " + to_string(report_interval) + "\n"
+            // + NV_KEY_CHG_INTVL   " " + to_string(key_change_interval) + "\n"  // obsolete
             + NV_ENCRYPT         " " + (enc_enabled ? "true" : "false") + "\n"
             + NV_AUTHENTICATION  " " + (auth_enabled ? "true" : "false") + "\n"
             + NV_ATTEST          " " + (attest_enabled ? "true" : "false") + "\n"
             + NV_SEEC            " " + (seec_enabled ? "true" : "false") + "\n"
-            + NV_KEY_ENCRYPTION  " " + (key_enc_enabled ? "true" : "false") + "\n"
+            // + NV_KEY_ENCRYPTION  " " + (key_enc_enabled ? "true" : "false") + "\n"  // obsolete
             + NV_SIGNING         " " + (sign_enabled ? "true" : "false") + "\n"
-            + NV_KEY_CHANGE      " " + (key_change_enabled ? "true" : "false") + "\n"
+            // + NV_KEY_CHANGE      " " + (key_change_enabled ? "true" : "false") + "\n"  // obsolete
             + NV_PASSPORT_PERIOD " " + to_string(passport_period) + "\n"
             + NV_PAYLOAD_SIZE    " " + to_string(payload_size) + "\n"
             + NV_PASS_THRU       " " + (pass_thru_enabled ? "true" : "false") + "\n"
@@ -95,9 +96,9 @@ public:
             + NV_ITERATIONS      " " + to_string(iterations) + "\n"
             + NV_DATA_TRANSPORT  " " + TO_DATA_TRANSPORT(transport) + "\n"
             + NV_LOG_LEVEL       " " + to_string(log_level) + "\n"
-            + NV_MQTT_URL        " " + mqttUrl + "\n"
-            + NV_MQTT_SUB_TOPIC  " " + topicSub + "\n"
-            + NV_MQTT_PUB_TOPIC  " " + topicPub + ""
+            + NV_MQTT_URL        " " + mqttUrl + ""
+            // + NV_MQTT_SUB_TOPIC  " " + topicSub + "\n"  // do not change topics because pub/sub roles are different
+            // + NV_MQTT_PUB_TOPIC  " " + topicPub + ""
             // "Component: " + configComponent.toString());
         );
     }

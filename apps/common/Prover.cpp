@@ -138,8 +138,8 @@ void Prover::pause(int bad_proc_count)
 
     if (expecting == DATA) {
         if (cause == CAUSE_PERIODIC) {
-            // delay = config.getReportInterval();
-            delay = board->getReportInterval();  // for demo purposes, the interval is reloaded each time
+            delay = config.getReportInterval();
+            // delay = board->getReportInterval();  // for demo purposes, the interval is reloaded each time
         }
     }
     else if (expecting == PASSPORT_REQUEST) {
@@ -148,8 +148,9 @@ void Prover::pause(int bad_proc_count)
             SD_LOG(LOG_WARNING, "passport expired in %d seconds", delay);
         }
         else if (cause == CAUSE_INVALID_PASSPORT) {
-            delay = board->getReportInterval();  // for demo purposes, the interval is reloaded each time
-        }
+            delay = config.getReportInterval();
+            // delay = board->getReportInterval();  // for demo purposes, the interval is reloaded each time
+         }
     }
 
     if (bad_proc_count > 0) {
