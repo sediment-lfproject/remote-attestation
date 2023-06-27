@@ -39,7 +39,6 @@ protected:
     string component;
     ConfigComponent configComponent;
 
-    string jstr;
     bool download = false; // whether to download config to the device
 
     int num_cycles = 5;  // number of cycles in the WKD-IBE case
@@ -241,11 +240,6 @@ public:
     void setKeyEncryptionEnabled(bool keyEncryptionEnabled = true)
     {
         this->key_enc_enabled = keyEncryptionEnabled;
-    }
-
-    string& getJstr()
-    {
-        return jstr;
     }
 
     int getIterations() const
