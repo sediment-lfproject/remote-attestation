@@ -109,7 +109,10 @@ public:
 
         vector<uint8_t> &auth_key = config.getAuthKey();
         crypto->changeKey(KEY_AUTH, (unsigned char *) &auth_key[0], auth_key.size());
-#endif        
+#endif
+        if (!config.isAttestationEnabled()) {
+            expecting = DATA;
+        }
     }
 
     void run();
