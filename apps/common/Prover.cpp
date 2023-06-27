@@ -153,9 +153,10 @@ void Prover::pause(int bad_proc_count)
          }
     }
 
-    if (bad_proc_count > 0) {
+    if (full_reset_count > 0 || bad_proc_count > 0) {
         delay = (1 << ((full_reset_count * MAX_FAILURES + bad_proc_count - 1) / MAX_FAILURES));
         delay = (delay > MAX_DELAY) ? MAX_DELAY : delay;
+        SD_LOG(LOG_WARNING, "next attempt in %d seconds", delay);
     }
 
     if (delay > 0)
@@ -1031,8 +1032,10 @@ bool Prover::toGiveup(bool success, int *bad_count, bool fullReset)
         if (*bad_count >= MAX_FAILURES) {
             proc_completed = false;
             resetProcedure(fullReset);
+            if (fullReset)
+                *bad_count = 0;
             SD_LOG(LOG_ERR, "giving up after %d %s failures",
-              MAX_FAILURES, fullReset ? "procedure" : "message");
+                   MAX_FAILURES, fullReset ? "procedure" : "message");
             return true;
         }
     }
