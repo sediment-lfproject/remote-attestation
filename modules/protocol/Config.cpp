@@ -214,8 +214,10 @@ bool Config::parseTopLevel(bool isProver, string &key, string &value)
             }
             endpoint->setPort(stoi(value));
         }
-        else
+        else {
+            SD_LOG(LOG_ERR, "unrecognized parameter: %s", key.c_str());
             processed = false;
+        }
     }
     else {
         // SD_LOG(LOG_ERR, "unrecognized parameter: %s", item.c_str());
