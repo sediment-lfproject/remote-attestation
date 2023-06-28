@@ -37,6 +37,5 @@ int main(int argc, char **argv)
         printf("control: thread create failed\n");
         exit(1);
     }
-    cout << config.toString() << endl;
     verifier.run();
 }

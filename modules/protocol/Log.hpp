@@ -29,6 +29,7 @@ using namespace std;
 #define TO_KEY_ENC_TYPE(x)     to_string(x)
 #define TO_KEY_PURPOSE(x)      to_string(x)
 #define TO_MEAS_TYPE(x)        to_string(x)
+#define TO_DATA_TRANSPORT(x)   to_string(x)
 #else // if defined(LOG_NONE)
 
 #define SD_LOG(fmt, ...)       Log::print(fmt, ## __VA_ARGS__)
@@ -45,6 +46,7 @@ using namespace std;
 #define TO_KEY_ENC_TYPE(x)     Log::toKeyEncType(x)
 #define TO_KEY_PURPOSE(x)      Log::toKeyPurpose(x)
 #define TO_MEAS_TYPE(x)        Log::toMeasurementType(x)
+#define TO_DATA_TRANSPORT(x)   Log::toDataTransport(x)
 #endif // if defined(LOG_NONE)
 
 #if defined(PLATFORM_GIANT_GECKO)
@@ -107,6 +109,7 @@ public:
     static string toKeyEncType(KeyEncType type);
     static string toKeyPurpose(KeyPurpose purpose);
     static string toMeasurementType(MeasurementType measurementType);
+    static string toDataTransport(DataTransport dataTransport);
 
     static int getLoglevel()
     {

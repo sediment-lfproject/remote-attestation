@@ -138,8 +138,8 @@ void Prover::pause(int bad_proc_count)
 
     if (expecting == DATA) {
         if (cause == CAUSE_PERIODIC) {
-            // delay = config.getReportInterval();
-            delay = board->getReportInterval();  // for demo purposes, the interval is reloaded each time
+            delay = config.getReportInterval();
+            // delay = board->getReportInterval();  // for demo purposes, the interval is reloaded each time
         }
     }
     else if (expecting == PASSPORT_REQUEST) {
@@ -148,13 +148,15 @@ void Prover::pause(int bad_proc_count)
             SD_LOG(LOG_WARNING, "passport expired in %d seconds", delay);
         }
         else if (cause == CAUSE_INVALID_PASSPORT) {
-            delay = board->getReportInterval();  // for demo purposes, the interval is reloaded each time
-        }
+            delay = config.getReportInterval();
+            // delay = board->getReportInterval();  // for demo purposes, the interval is reloaded each time
+         }
     }
 
-    if (bad_proc_count > 0) {
+    if (full_reset_count > 0 || bad_proc_count > 0) {
         delay = (1 << ((full_reset_count * MAX_FAILURES + bad_proc_count - 1) / MAX_FAILURES));
         delay = (delay > MAX_DELAY) ? MAX_DELAY : delay;
+        SD_LOG(LOG_WARNING, "next attempt in %d seconds", delay);
     }
 
     if (delay > 0)
@@ -1030,8 +1032,10 @@ bool Prover::toGiveup(bool success, int *bad_count, bool fullReset)
         if (*bad_count >= MAX_FAILURES) {
             proc_completed = false;
             resetProcedure(fullReset);
+            if (fullReset)
+                *bad_count = 0;
             SD_LOG(LOG_ERR, "giving up after %d %s failures",
-              MAX_FAILURES, fullReset ? "procedure" : "message");
+                   MAX_FAILURES, fullReset ? "procedure" : "message");
             return true;
         }
     }

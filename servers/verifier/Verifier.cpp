@@ -137,7 +137,7 @@ Message * Verifier::handleAttestationRequest(AttestationRequest *attReq, Endpoin
 
     uint32_t cp = attReq->getCounter();
     uint32_t cv = stoi(device->getCol(COL_SQN));
-    if (cp < cv) {
+    if (cp <= cv) {
         SD_LOG(LOG_ERR, "out of date Attestation Request SQN: Cv=%d, Cp=%d", cv, cp);
         return NULL;
     }

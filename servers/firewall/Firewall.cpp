@@ -103,7 +103,8 @@ Message * Firewall::handleConfigMessage(ConfigMessage *configRequest, Device *de
 
     if (config.isDownload()) {
         ConfigMessage *configResponse = new ConfigMessage();
-        configResponse->setConfigs(config.getJstr());
+        string cfgStr = config.toString();
+        configResponse->setConfigs(cfgStr);
         configResponse->setDeviceID(configRequest->getDeviceID());
 
         return configResponse;
