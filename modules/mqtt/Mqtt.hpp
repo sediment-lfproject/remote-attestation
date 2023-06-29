@@ -21,13 +21,13 @@ private:
     string topicSub;
     string topicRev;
     StateMachine *machine = NULL;
+    bool connected = false;
 
 public:
     Mqtt(const string &pub, const string &sub, StateMachine *machine)
     {
         topicPub = pub;
         topicSub = sub;
-        SD_LOG(LOG_ERR, "%s", topicPub.c_str());
         this->machine = machine;
     }
 
@@ -49,5 +49,13 @@ public:
     string &getTopicRev()
     {
         return topicRev;
+    }
+
+    bool isConnected() {
+        return connected;
+    }
+
+    void setConnected(bool connected) {
+        this->connected = connected;
     }
 };

@@ -30,6 +30,5 @@ int main(int argc, char **argv)
     Utils::readRsaKey(cli.getRsaPrivateKey(), KeyDistRSA::getPrivateKey());
     Utils::readRsaKey(cli.getRsaPublicKey(), KeyDistRSA::getPublicKey());
 #endif
-    cout << config.toString() << endl;
     firewall.run();
 }

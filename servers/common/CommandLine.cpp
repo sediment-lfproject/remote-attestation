@@ -22,6 +22,8 @@ void CommandLine::printUsage(char *cmd)
          << "Use the specified device database." << endl
          << "  -e/--sediment-home <sediment home directory>\n\t"
          << "Set the sediment installation directory." << endl
+         << "  -g/--no-gui\n\t"
+         << "Run without GUI." << endl
          << "  -p/--publisher <config file>\n\t"
          << "Read publisher configuration file. Used only by publishers." << endl
          << "  -s/--subscriber <config file>\n\t"
@@ -40,6 +42,7 @@ void CommandLine::parseCmdline(int argc, char *argv[])
         { "app-server",     no_argument,       0, 'a' },
         { "database",       required_argument, 0, 'd' },
         { "sediment-home",  required_argument, 0, 'e' },
+        { "no-gui",         required_argument, 0, 'g' },
         { "publisher",      required_argument, 0, 'p' },
         { "subscriber",     required_argument, 0, 's' },
         { "help",           no_argument,       0, 'h' },
@@ -48,7 +51,7 @@ void CommandLine::parseCmdline(int argc, char *argv[])
 
     int option_index = 0;
 
-    while ((c = getopt_long(argc, argv, "ad:e:hp:s:",
+    while ((c = getopt_long(argc, argv, "ad:e:ghp:s:",
       long_options, &option_index)) != -1)
     {
         switch (c) {
@@ -66,7 +69,10 @@ void CommandLine::parseCmdline(int argc, char *argv[])
             }
             updateHome(optarg);
             SD_LOG(LOG_INFO, "SEDIMENT overridden by command line: %s", sediment_home.c_str());                
-            break;            
+            break;
+        case 'g':
+            noGUI = true;
+            break;
         case 'p':
             publisherConfig = optarg;
             break;

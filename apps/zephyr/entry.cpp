@@ -191,7 +191,7 @@ static void reload_flash(Prover &prover)
 
     if (reload(NV_MQTT_SUB_TOPIC, sizeof(buf), buf) == 0) {
         string sub((char *) buf);
-        config.setTopicSub(pub);
+        config.setTopicSub(sub);
     }
 
     uint8_t enckey[Crypto::ENC_KEY_BYTES];

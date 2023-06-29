@@ -439,6 +439,18 @@ string Log::toMeasurementType(MeasurementType measurementType)
     }
 }
 
+string Log::toDataTransport(DataTransport dataTransport)
+{
+    switch (dataTransport) {
+    case TRANSPORT_SEDIMENT:
+        return "sediment";
+    case TRANSPORT_MQTT:
+        return "mqtt";
+    case TRANSPORT_SEDIMENT_MQTT:
+        return "sediment_mqtt";
+    }
+}
+
 void Log::print(LogLevel level, const char *fmt, ...)
 {
     char buf[DEBUG_BUF_SIZE];

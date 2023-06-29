@@ -45,8 +45,15 @@ bool Mqtt::connect(string &url, string &id)
 void Mqtt::publish(char *message)
 {
     try {
-        if (cb == NULL || !cb->isOk())
+        if (!isConnected()) {
+            SD_LOG(LOG_ERR, "can't publish to MQTT: not connected");
             return;
+        }
+
+        if (cb == NULL || !cb->isOk()) {
+            SD_LOG(LOG_ERR, "can't publish to MQTT: null call back or call back not ready");
+            return;
+        }
 
         if (top == NULL)
             top = new mqtt::topic(*cli, topicPub, QOS);

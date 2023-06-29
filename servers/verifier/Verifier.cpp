@@ -137,7 +137,7 @@ Message * Verifier::handleAttestationRequest(AttestationRequest *attReq, Endpoin
 
     uint32_t cp = attReq->getCounter();
     uint32_t cv = stoi(device->getCol(COL_SQN));
-    if (cp < cv) {
+    if (cp <= cv) {
         SD_LOG(LOG_ERR, "out of date Attestation Request SQN: Cv=%d, Cp=%d", cv, cp);
         return NULL;
     }
@@ -629,6 +629,9 @@ void Verifier::sendAlert(Reason reason, string deviceID, EndpointSock *src)
 
 void Verifier::publish(Evidence *evidence, bool verified)
 {
+    if (noGUI)
+        return;
+
     int pub_sock = Comm::connectTcp(guiEndpoint);
 
     if (pub_sock < 0) {

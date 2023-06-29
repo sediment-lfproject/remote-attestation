@@ -29,7 +29,7 @@ protected:
     int mySock = -1;
 
     uint32_t rejectCount    = 0; // consecutive times of data being rejected
-    uint32_t attestSqn      = 0; // current attestation sequence number
+    uint32_t attestSqn      = 1; // current attestation sequence number
     uint32_t attestRestarts = 0; // amount of restarts from AR
     uint32_t seecSqn        = 0; // current seec number
 
@@ -113,7 +113,10 @@ public:
 
         vector<uint8_t> &auth_key = config.getAuthKey();
         crypto->changeKey(KEY_AUTH, (unsigned char *) &auth_key[0], auth_key.size());
-#endif        
+#endif
+        if (!config.isAttestationEnabled()) {
+            expecting = DATA;
+        }
     }
 
     void run();
