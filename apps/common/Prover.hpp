@@ -115,7 +115,12 @@ public:
         crypto->changeKey(KEY_AUTH, (unsigned char *) &auth_key[0], auth_key.size());
 #endif
         if (!config.isAttestationEnabled()) {
+#ifdef SEEC_ENABLED
+            expecting = REVOCATION_CHECK;
+#else
             expecting = DATA;
+#endif
+
         }
     }
 
