@@ -65,11 +65,17 @@ static Item flash_items[] = {
     { NV_SURIPATH_SIZE,    NV_OFFSET_SURIPATH_SIZE,    NV_LEN_SURIPATH_SIZE,    NV_TYPE_INT                 },
     { NV_SURIPATH,         NV_OFFSET_SURIPATH,         NV_LEN_SURIPATH,         NV_TYPE_BLOCK               },
 
+    { NV_RURIPATH_SIZE,    NV_OFFSET_RURIPATH_SIZE,    NV_LEN_RURIPATH_SIZE,    NV_TYPE_INT                 },
+    { NV_RURIPATH,         NV_OFFSET_RURIPATH,         NV_LEN_RURIPATH,         NV_TYPE_BLOCK               },
+
     { NV_TIMEPATH_SIZE,    NV_OFFSET_TIMEPATH_SIZE,    NV_LEN_TIMEPATH_SIZE,    NV_TYPE_INT                 },
     { NV_TIMEPATH,         NV_OFFSET_TIMEPATH,         NV_LEN_TIMEPATH,         NV_TYPE_BLOCK               },
 
     { NV_SIGNKEY_SIZE,     NV_OFFSET_SIGNKEY_SIZE,     NV_LEN_SIGNKEY_SIZE,     NV_TYPE_INT                 },
     { NV_SIGNKEY,          NV_OFFSET_SIGNKEY,          NV_LEN_SIGNKEY,          NV_TYPE_BLOCK               },
+
+    { NV_REVKEY_SIZE,      NV_OFFSET_REVKEY_SIZE,      NV_LEN_REVKEY_SIZE,      NV_TYPE_INT                 },
+    { NV_REVKEY,           NV_OFFSET_REVKEY,           NV_LEN_REVKEY,           NV_TYPE_BLOCK               },
 
     { NV_RSA_PRIVATE_SIZE, NV_OFFSET_RSA_PRIVATE_SIZE, NV_LEN_RSA_PRIVATE_SIZE, NV_TYPE_INT                 },
     { NV_RSA_PRIVATE,      NV_OFFSET_RSA_PRIVATE,      NV_LEN_RSA_PRIVATE,      NV_TYPE_LINE                },

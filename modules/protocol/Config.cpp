@@ -172,6 +172,13 @@ bool Config::parseTopLevel(bool isProver, string &key, string &value)
         else
             Utils::readHex(Subscribe::getSignUripath(), value, value.size() / 2);
     }
+    else if (!key.compare(NV_RURIPATH_SIZE)) {
+        // size = stoi(value);
+    }
+    else if (!key.compare(NV_RURIPATH)) {
+        if (!isProver)
+            Utils::readHex(Subscribe::getRevocationUripath(), value, value.size() / 2);
+    }
     else if (!key.compare(NV_TIMEPATH_SIZE)) {
         // size = stoi(value);
     }
@@ -187,6 +194,13 @@ bool Config::parseTopLevel(bool isProver, string &key, string &value)
     else if (!key.compare(NV_SIGNKEY)) {
         if (isProver)
             Utils::readHex(Publish::getSigningKey(), value, value.size() / 2);
+    }
+    else if (!key.compare(NV_REVKEY_SIZE)) {
+        // size = stoi(value);
+    }
+    else if (!key.compare(NV_REVKEY)) {
+        if (!isProver)
+            Utils::readHex(Subscribe::getRevocationKey(), value, value.size() / 2);
     }
     else if (!key.compare(NV_ENCRYPTKEY_SIZE)) { }
     else if (!key.compare(NV_ENCRYPTKEY)) {
@@ -297,10 +311,14 @@ bool isOptional(string key)
            key.compare(NV_ENCRYPTKEY) &&
            key.compare(NV_SIGNKEY) &&
            key.compare(NV_SIGNKEY_SIZE) &&
+           key.compare(NV_REVKEY) &&
+           key.compare(NV_REVKEY_SIZE) &&
            key.compare(NV_EURIPATH) &&
            key.compare(NV_EURIPATH_SIZE) &&
            key.compare(NV_SURIPATH) &&
            key.compare(NV_SURIPATH_SIZE) &&
+           key.compare(NV_RURIPATH) &&
+           key.compare(NV_RURIPATH_SIZE) &&
            key.compare(NV_TIMEPATH) &&
            key.compare(NV_TIMEPATH_SIZE) &&
            key.compare(NV_MQTT_REV_TOPIC) &&
