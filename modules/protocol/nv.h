@@ -191,9 +191,17 @@ extern "C" {
 #define NV_LEN_SURIPATH          64
 #define NV_OFFSET_SURIPATH       (NV_OFFSET_SURIPATH_SIZE + NV_LEN_SURIPATH_SIZE)
 
+#define NV_RURIPATH_SIZE         "ruripath_size"
+#define NV_LEN_RURIPATH_SIZE     4
+#define NV_OFFSET_RURIPATH_SIZE  (NV_OFFSET_SURIPATH + NV_LEN_SURIPATH)
+
+#define NV_RURIPATH              "ruripath"
+#define NV_LEN_RURIPATH          64
+#define NV_OFFSET_RURIPATH       (NV_OFFSET_RURIPATH_SIZE + NV_LEN_RURIPATH_SIZE)
+
 #define NV_TIMEPATH_SIZE        "timepath_size"
 #define NV_LEN_TIMEPATH_SIZE    4
-#define NV_OFFSET_TIMEPATH_SIZE (NV_OFFSET_SURIPATH + NV_LEN_SURIPATH)
+#define NV_OFFSET_TIMEPATH_SIZE (NV_OFFSET_RURIPATH + NV_LEN_RURIPATH)
 
 #define NV_TIMEPATH             "timepath"
 #define NV_LEN_TIMEPATH         16
@@ -207,9 +215,17 @@ extern "C" {
 #define NV_LEN_SIGNKEY          1024
 #define NV_OFFSET_SIGNKEY       (NV_OFFSET_SIGNKEY_SIZE + NV_LEN_SIGNKEY_SIZE)
 
+#define NV_REVKEY_SIZE         "revkey_size"
+#define NV_LEN_REVKEY_SIZE     4
+#define NV_OFFSET_REVKEY_SIZE  (NV_OFFSET_SIGNKEY + NV_LEN_SIGNKEY)
+
+#define NV_REVKEY              "revkey"
+#define NV_LEN_REVKEY          1024
+#define NV_OFFSET_REVKEY       (NV_OFFSET_REVKEY_SIZE + NV_LEN_REVKEY_SIZE)
+
 #define NV_AUTH_KEY             "auth_key"
 #define NV_LEN_AUTH_KEY         32
-#define NV_OFFSET_AUTH_KEY      (NV_OFFSET_SIGNKEY + NV_LEN_SIGNKEY)
+#define NV_OFFSET_AUTH_KEY      (NV_OFFSET_REVKEY + NV_LEN_REVKEY)
 
 #define NV_PROVER               "prover"
 #define NV_VERIFIER             "verifier"
