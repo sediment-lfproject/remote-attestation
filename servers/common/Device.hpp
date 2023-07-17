@@ -333,8 +333,8 @@ public:
     MySQLDeviceManager(const string &dbName);
 
     // DeviceManagers should not be copied
-    // operator=(const MySQLDeviceManager &other) = delete;
-    // MySQLDeviceManager(const MySQLDeviceManager &other) = delete;
+    void operator = (const MySQLDeviceManager &other)   = delete;
+    MySQLDeviceManager(const MySQLDeviceManager &other) = delete;
 
     Device * findDevice(string &serial);
     Device * findDeviceByIP(string &ip);
@@ -348,75 +348,3 @@ public:
 };
 
 typedef MySQLDeviceManager DeviceManager;
-
-// enum DBType { SQLite, MySQL };
-
-// template <DBType T> class DeviceManager
-// {
-// private:
-//     static map<string, Device *> devices;
-// public:
-//     static Device* findDevice(string &serial);
-//     static Device* findDeviceByIP(string &ip);
-//     static int callback(void *data, int argc, char **argv, char **azColName);
-//     static void deleteDevice(Device *device);
-//     static int insertEndpoint(Endpoint *endpoint);
-//     static int insertDevice(Device *device);
-//     static int insertDevice(string device);
-//     static int selectEndpoint(int endpointId);
-//     static Device* selectDevice(string col, string &value);
-//     static void createEndpointTable();
-//     static void createDeviceTable();
-//     static void open(const string &dbName);
-//     static string getCol(Device *device, string col);
-//     static void update(Device *device, string col, string value);
-// };
-
-// typedef DeviceManager<SQLite> SQLiteDeviceManager;
-// typedef DeviceManager<MySQL> MySQLDeviceManager;
-
-// template <> class DeviceManager<SQLite>
-// {
-// private:
-//     static map<string, Device *> devices;
-//     static sqlite3 *deviceDB;
-// public:
-//     static Device* findDevice(string &serial);
-//     static Device* findDeviceByIP(string &ip);
-//     static int callback(void *data, int argc, char **argv, char **azColName);
-//     static void deleteDevice(Device *device);
-//     static int insertEndpoint(Endpoint *endpoint);
-//     static int insertDevice(Device *device);
-//     static int insertDevice(string device);
-//     static int selectEndpoint(int endpointId);
-//     static Device* selectDevice(string col, string &value);
-//     static void createEndpointTable();
-//     static void createDeviceTable();
-//     static void open(const string &dbName);
-//     static string getCol(Device *device, string col);
-//     static void update(Device *device, string col, string value);
-// };
-
-// template <> class DeviceManager<MySQL>
-// {
-// private:
-//     static map<string, Device *> devices;
-//     static sql::Connection *conn;
-//     static sql::Statement *stmt;
-//     static void populateDevice(Device *device, sql::ResultSet *res);
-// public:
-//     static Device* findDevice(string &serial);
-//     static Device* findDeviceByIP(string &ip);
-//     static int callback(void *data, int argc, char **argv, char **azColName);
-//     static void deleteDevice(Device *device);
-//     static int insertEndpoint(Endpoint *endpoint);
-//     static int insertDevice(Device *device);
-//     static int insertDevice(string device);
-//     static int selectEndpoint(int endpointId);
-//     static Device* selectDevice(string col, string &value);
-//     static void createEndpointTable();
-//     static void createDeviceTable();
-//     static void open(const string &dbName);
-//     static string getCol(Device *device, string col);
-//     static void update(Device *device, string col, string value);
-// };
