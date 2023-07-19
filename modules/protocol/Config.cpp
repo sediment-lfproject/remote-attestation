@@ -17,6 +17,7 @@
 #ifdef SEEC_ENABLED
 #include "Publish.hpp"
 #include "Subscribe.hpp"
+#include "../../../servers/revocation/RevServer.hpp"
 #endif
 
 using std::filesystem::exists;
@@ -149,10 +150,13 @@ bool Config::parseTopLevel(bool isProver, string &key, string &value)
     }
 #ifdef SEEC_ENABLED
     else if (!key.compare(NV_PARAMS)) {
-        if (isProver)
+        if (isProver) {
             Utils::readHex(Publish::getParams(), value, value.size() / 2);
-        else
+        }
+        else {
             Utils::readHex(Subscribe::getParams(), value, value.size() / 2);
+            Utils::readHex(RevServer::getParams(), value, value.size() / 2);
+        }
     }
     else if (!key.compare(NV_EURIPATH_SIZE)) {
         // size = stoi(value);
