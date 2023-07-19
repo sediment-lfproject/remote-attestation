@@ -22,7 +22,7 @@ bool StateMachine::sendMessage(int peer_sock, MessageID messageID, uint8_t *seri
         return false;
     }
     if (config.getTransport() == TRANSPORT_SEDIMENT_MQTT &&
-      messageID == DATA)
+      (messageID == DATA || messageID == REVOCATION))
     {
         string pub = Log::toHexNoLimit((char *) serialized, msg_len);
         mqtt.publish((char *) &pub[0]);

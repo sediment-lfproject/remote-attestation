@@ -24,10 +24,11 @@ private:
     bool connected = false;
 
 public:
-    Mqtt(const string &pub, const string &sub, StateMachine *machine)
+    Mqtt(const string &pub, const string &sub, const string &rev, StateMachine *machine)
     {
         topicPub = pub;
         topicSub = sub;
+        topicRev = rev;
         this->machine = machine;
     }
 

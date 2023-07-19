@@ -46,7 +46,7 @@ public:
     StateMachine(Config &config, Board *board) :
         config(config),
         board(board),
-        mqtt(config.getTopicPub(), config.getTopicSub(), this)
+        mqtt(config.getTopicPub(), config.getTopicSub(), config.getTopicRev(), this)
     {
         board->setId(config.getComponent().getID());
     }
