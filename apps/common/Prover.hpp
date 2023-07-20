@@ -24,7 +24,7 @@ protected:
 
     Endpoint rpEndpoint; // saved relying party endpoint
     MessageID expecting = CONFIG;
-    Cause cause = CAUSE_POWER_ON;
+    Cause cause         = CAUSE_POWER_ON;
     int mySock = -1;
 
     uint32_t rejectCount    = 0; // consecutive times of data being rejected
@@ -39,6 +39,8 @@ protected:
 
     bool moveTo(MessageID id, Message *received);
     bool handleMessage(Message *message);
+
+    void finalizeAndSend(int peer_sock, Message *message);
 
     Message * prepareConfig(Message *received);
     bool handleConfig(Message *received);
@@ -65,9 +67,9 @@ protected:
     bool preapreEvidenceOsVersion(Challenge *challenge, EvidenceItem *item);
     bool prepareEvidenceFullFirmware(Challenge *challenge, EvidenceItem *item, uint32_t *elapsed, int *optional);
     bool prepareEvidenceConfigs(Challenge *challenge, EvidenceItem *item, uint32_t *elapsed, int *optional);
-    
-    bool prepareEvidenceHashing(Challenge *challenge, EvidenceItem *item, uint32_t *elapsed, 
-                                int *optional, EvidenceType evidenceType, const uint8_t *starting, uint32_t blockSize);
+
+    bool prepareEvidenceHashing(Challenge *challenge, EvidenceItem *item, uint32_t *elapsed,
+      int *optional, EvidenceType evidenceType, const uint8_t *starting, uint32_t blockSize);
 
 #ifdef PLATFORM_RPI
     string sediment_home;
@@ -80,10 +82,11 @@ protected:
     void resetProcedure(bool proc);
     bool toGiveup(bool msg_success, int *bad_msg_count, bool fullReset);
     bool isPassportExipred();
-    
-    void transit(MessageID state, Cause cause) {
+
+    void transit(MessageID state, Cause cause)
+    {
         this->expecting = state;
-        this->cause = cause;
+        this->cause     = cause;
     }
 
 public:
@@ -92,10 +95,10 @@ public:
         seec(config)
     {
 #ifdef PLATFORM_RPI
-        // The following are not necessary for non-Linux based devices 
+        // The following are not necessary for non-Linux based devices
         // since they load configurations from the flash after the prover
         // is constructed and overrides what's done here.
-        
+
         this->endpoint.copy(*config.getComponent().getOutgoing());
         this->rpEndpoint.copy(endpoint);
 
@@ -109,7 +112,7 @@ public:
 
         vector<uint8_t> &auth_key = config.getAuthKey();
         crypto->changeKey(KEY_AUTH, (unsigned char *) &auth_key[0], auth_key.size());
-#endif
+#endif // ifdef PLATFORM_RPI
         if (!config.isAttestationEnabled()) {
             expecting = DATA;
         }
@@ -145,5 +148,6 @@ public:
     {
         sediment_home = home;
     }
-#endif    
+
+#endif // ifdef PLATFORM_RPI
 };

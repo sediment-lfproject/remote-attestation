@@ -28,9 +28,11 @@ private:
 
 protected:
     Message * decodeMessage(uint8_t dataArray[], uint32_t len);
-    Message * handleMessage(Message *message, EndpointSock *src, Device *device, uint8_t *serialized, uint32_t len);
-    Message * handleAttestationRequest(AttestationRequest *attReq, EndpointSock *src, Device *device);
-    Message * handleEvidence(Evidence *evidence, EndpointSock *sr, Device *devicec);
+    Message * handleMessage(DeviceManager &deviceManager, Message *message, EndpointSock *src, Device *device,
+      uint8_t *serialized, uint32_t len);
+    Message * handleAttestationRequest(DeviceManager &deviceManager, AttestationRequest *attReq, EndpointSock *src,
+      Device *device);
+    Message * handleEvidence(DeviceManager &deviceManager, Evidence *evidence, EndpointSock *sr, Device *devicec);
     Message * handlePassportResponse(PassportResponse *passportResponse, Device *device);
 
     void prepareGrant(Grant *grant);
@@ -40,12 +42,13 @@ protected:
     bool verifyBootTime(EvidenceItem *item, Device *device);
     bool verifyConfigs(EvidenceItem *item, Device *device, EvidenceType type);
     bool verifyUDF(EvidenceItem *item, Device *device, EvidenceType type);
-    bool verifyHashing(EvidenceItem *item, Device *device, EvidenceType type, unsigned char *bufPtr, int fileSize, int fd);
+    bool verifyHashing(EvidenceItem *item, Device *device, EvidenceType type, unsigned char *bufPtr, int fileSize,
+      int fd);
 
     string receiveDeviceID(int dev_sock);
 
     void runService();
-    void sendAlert(Reason reason, string deviceID, EndpointSock *src);
+    void sendAlert(DeviceManager &deviceManager, Reason reason, string deviceID, EndpointSock *src);
     void publish(Evidence *evidence, bool verified);
 
 public:

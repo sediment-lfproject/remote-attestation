@@ -17,8 +17,11 @@ void CommandLine::printUsage(char *cmd)
 {
     cout << cmd << endl
          << "  -a/--application-server\n\t"
-         << "Run as a application server, instead of a signature verifier" << endl         
+         << "Run as a application server, instead of a signature verifier" << endl
+         << "  for SQLite databases\n\t"
          << "  -d/--database <device database>\n\t"
+         << "  for MySQL databases\n\t"
+         << "  -d/--database <url>,<user>,<pass>,<device database>\n\t"
          << "Use the specified device database." << endl
          << "  -e/--sediment-home <sediment home directory>\n\t"
          << "Set the sediment installation directory." << endl
@@ -39,14 +42,14 @@ void CommandLine::parseCmdline(int argc, char *argv[])
     int c;
 
     struct option long_options[] = {
-        { "app-server",     no_argument,       0, 'a' },
-        { "database",       required_argument, 0, 'd' },
-        { "sediment-home",  required_argument, 0, 'e' },
-        { "no-gui",         required_argument, 0, 'g' },        
-        { "publisher",      required_argument, 0, 'p' },
-        { "subscriber",     required_argument, 0, 's' },
-        { "help",           no_argument,       0, 'h' },
-        { 0,                0,                 0, 0   }
+        { "app-server",    no_argument,       0, 'a' },
+        { "database",      required_argument, 0, 'd' },
+        { "sediment-home", required_argument, 0, 'e' },
+        { "no-gui",        required_argument, 0, 'g' },
+        { "publisher",     required_argument, 0, 'p' },
+        { "subscriber",    required_argument, 0, 's' },
+        { "help",          no_argument,       0, 'h' },
+        { 0,               0,                 0, 0   }
     };
 
     int option_index = 0;
@@ -57,22 +60,21 @@ void CommandLine::parseCmdline(int argc, char *argv[])
         switch (c) {
         case 'a':
             sigVerifier = false;
-            break;             
+            break;
         case 'd':
             database = optarg;
             break;
         case 'e':
-            if (!filesystem::exists(optarg)) 
-            {
+            if (!filesystem::exists(optarg)) {
                 SD_LOG(LOG_ERR, "SEDIMENT home directory does not exist: %s", optarg);
                 exit(EXIT_FAILURE);
             }
             updateHome(optarg);
-            SD_LOG(LOG_INFO, "SEDIMENT overridden by command line: %s", sediment_home.c_str());                
-            break; 
+            SD_LOG(LOG_INFO, "SEDIMENT overridden by command line: %s", sediment_home.c_str());
+            break;
         case 'g':
             noGUI = true;
-            break;                         
+            break;
         case 'p':
             publisherConfig = optarg;
             break;

@@ -63,7 +63,8 @@ Message * Firewall::decodeMessage(uint8_t dataArray[], uint32_t len)
     return message;
 }
 
-Message * Firewall::handleMessage(Message *message, EndpointSock *src, Device *device, uint8_t *serialized,
+Message * Firewall::handleMessage(DeviceManager &deviceManager, Message *message, EndpointSock *src, Device *device,
+  uint8_t *serialized,
   uint32_t len)
 {
     (void) src;
@@ -76,10 +77,10 @@ Message * Firewall::handleMessage(Message *message, EndpointSock *src, Device *d
         response = handleConfigMessage((ConfigMessage *) message, device);
         break;
     case PASSPORT_REQUEST:
-        response = handlePassportRequest((PassportRequest *) message, device);
+        response = handlePassportRequest(deviceManager, (PassportRequest *) message, device);
         break;
     case PASSPORT_CHECK:
-        response = handlePassportCheck((PassportCheck *) message, device);
+        response = handlePassportCheck(deviceManager, (PassportCheck *) message, device);
         break;
     case DATA:
         response = handleData((Data *) message, device, serialized, len);
@@ -226,7 +227,8 @@ Message * Firewall::handleKeyChange(KeyChange *keyChange, Device *device, uint8_
     return NULL;
 }
 
-Message * Firewall::handlePassportRequest(PassportRequest *passportRequest, Device *device)
+Message * Firewall::handlePassportRequest(DeviceManager &deviceManager, PassportRequest *passportRequest,
+  Device *device)
 {
     if (device == NULL) {
         SD_LOG(LOG_ERR, "null device");
@@ -252,7 +254,7 @@ Message * Firewall::handlePassportRequest(PassportRequest *passportRequest, Devi
         seec->encryptKey(keyBox, board, passportResponse->getMeasurementList(), deviceID);
         seec->setLastChangeKey(getTimestamp());
 #endif
-        carbonCopy(verifierEp, passportResponse);
+        carbonCopy(deviceManager, verifierEp, passportResponse);
     }
     else {
         KeyBox &keyBox = passportResponse->getAttKeyBox();
@@ -262,7 +264,7 @@ Message * Firewall::handlePassportRequest(PassportRequest *passportRequest, Devi
     return passportResponse;
 }
 
-Message * Firewall::handlePassportCheck(PassportCheck *passportCheck, Device *device)
+Message * Firewall::handlePassportCheck(DeviceManager &deviceManager, PassportCheck *passportCheck, Device *device)
 {
     if (device == NULL) {
         SD_LOG(LOG_ERR, "null device");
@@ -283,7 +285,7 @@ Message * Firewall::handlePassportCheck(PassportCheck *passportCheck, Device *de
         return NULL;
     }
 
-    device->update(COL_PASSPORT_EXPIRY, to_string(expired));
+    deviceManager.update(device, COL_PASSPORT_EXPIRY, to_string(expired));
     device->setPassportExpiryDate(expired);
 
     const Endpoint relyingParty = device->getRelyingPartyEndpoint();
@@ -335,7 +337,7 @@ bool Firewall::validatePassport(string &deviceID, Passport &passport)
     return true;
 }
 
-void Firewall::carbonCopy(Endpoint &endpoint, Message *message)
+void Firewall::carbonCopy(DeviceManager &deviceManager, Endpoint &endpoint, Message *message)
 {
     const int MAX_ATTEMPTS = 3;
 
@@ -354,7 +356,7 @@ void Firewall::carbonCopy(Endpoint &endpoint, Message *message)
         sleep(1);
     }
 
-    finalizeAndSend(sock, message);
+    finalizeAndSend(deviceManager, sock, message);
 
     char buf[32];
     recv(sock, buf, 32, 0); // ack; content irrelevant

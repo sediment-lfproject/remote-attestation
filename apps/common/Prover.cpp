@@ -35,13 +35,14 @@ static bool proc_completed  = false;
 void Prover::run()
 {
     attestSqn = board->getAttestSqn();
-    seecSqn = board->getSeecSqn();
+    seecSqn   = board->getSeecSqn();
 
     if (config.getTransport() == TRANSPORT_SEDIMENT_MQTT) {
         string url = config.getMqttUrl();
         bool ok    = mqtt.connect(url, config.getComponent().getID());
         if (!ok)
             return;
+
         while (!mqtt.isConnected()) {
             board->sleepSec(1);
         }
@@ -150,7 +151,7 @@ void Prover::pause(int bad_proc_count)
         else if (cause == CAUSE_INVALID_PASSPORT) {
             delay = config.getReportInterval();
             // delay = board->getReportInterval();  // for demo purposes, the interval is reloaded each time
-         }
+        }
     }
 
     if (full_reset_count > 0 || bad_proc_count > 0) {
@@ -251,7 +252,7 @@ bool Prover::moveTo(MessageID id, Message *received)
 
         if (config.getTransport() == TRANSPORT_SEDIMENT_MQTT) {
             towait = false;
-            cause = CAUSE_PERIODIC;
+            cause  = CAUSE_PERIODIC;
         }
         else
             expecting = RESULT;
@@ -495,16 +496,16 @@ Message * Prover::prepareEvidence(Message *received)
             break;
         case EVIDENCE_CONFIGS:
             itemOk = prepareEvidenceConfigs(challenge, &items[count], &elapsed, &optional);
-            count++;       
+            count++;
             break;
         case EVIDENCE_UDF_LIB:
-#ifdef PLATFORM_RPI        
+#ifdef PLATFORM_RPI
             itemOk = prepareEvidenceUDFLib(challenge, &items[count], &elapsed, &optional);
             count++;
 #else
             SD_LOG(LOG_ERR, "UDF lib not supported for non-Linux based devices");
             itemOk = false;
-#endif            
+#endif
             break;
         case EVIDENCE_UDF1:
         case EVIDENCE_UDF2:
@@ -723,7 +724,7 @@ bool Prover::handleResult(Message *received)
 
     expecting = DATA;
 
-    Result *result = (Result *) received;
+    Result *result        = (Result *) received;
     Acceptance acceptance = result->getAcceptance();
     if (acceptance == REJECT || acceptance == NO_COMM) {
         rejectCount++;
@@ -814,8 +815,8 @@ bool Prover::preapreEvidenceUDF(Challenge *challenge, EvidenceItem *item, Eviden
     item->setEncoding(ENCODING_ENCRYPTED);
 
     string library = sediment_home + "lib/sediment_udf.so";
-    string udf = run_udf(evidenceType, library);
-    int udflen = udf.size(); // strlen(udf);
+    string udf     = run_udf(evidenceType, library);
+    int udflen     = udf.size(); // strlen(udf);
 
     // Each block is 16 byte. If the clear-text is multiple of block size,
     // a whole new block is needed for padding.
@@ -915,16 +916,17 @@ bool Prover::prepareEvidenceFullFirmware(Challenge *challenge, EvidenceItem *ite
 bool Prover::prepareEvidenceConfigs(Challenge *challenge, EvidenceItem *item, uint32_t *elapsed, int *optional)
 {
     uint32_t blockSize;
-    char *starting = board->getConfigBlocks((int *)&blockSize);   // memoery allocation
+    char *starting = board->getConfigBlocks((int *) &blockSize); // memoery allocation
 
-    bool val = prepareEvidenceHashing(challenge, item, elapsed, optional, EVIDENCE_CONFIGS, (const uint8_t *)starting, blockSize);
+    bool val = prepareEvidenceHashing(challenge, item, elapsed, optional, EVIDENCE_CONFIGS, (const uint8_t *) starting,
+        blockSize);
     free(starting);
 
     return val;
 }
 
-bool Prover::prepareEvidenceHashing(Challenge *challenge, EvidenceItem *item, uint32_t *elapsed, 
-    int *optional, EvidenceType evidenceType, const uint8_t *starting, uint32_t blockSize)
+bool Prover::prepareEvidenceHashing(Challenge *challenge, EvidenceItem *item, uint32_t *elapsed,
+  int *optional, EvidenceType evidenceType, const uint8_t *starting, uint32_t blockSize)
 {
     vector<uint8_t> &nonce = challenge->getNonce();
 
@@ -951,7 +953,7 @@ bool Prover::prepareEvidenceHashing(Challenge *challenge, EvidenceItem *item, ui
     item->setType(evidenceType);
     item->setEncoding(ENCODING_HMAC_SHA256);
 
-    return true;    
+    return true;
 }
 
 void Prover::setTimestamp(Message *message)
@@ -971,6 +973,28 @@ void Prover::calAuthToken(Message *message, uint8_t *serialized, uint32_t len)
     }
     AuthToken &authToken = message->getAuthToken();
     crypto->calDigest(authToken, serialized, len, message->getPayloadOffset());
+}
+
+void Prover::finalizeAndSend(int peer_sock, Message *message)
+{
+    setTimestamp(message);
+    AuthToken &authToken = message->getAuthToken();
+
+    uint32_t msg_len;
+    uint8_t *serialized = message->serialize(&msg_len);
+
+    calAuthToken(message, serialized, msg_len);
+
+    uint32_t size = authToken.getSize();
+    Vector data(size);
+    authToken.encode(data);
+
+    memcpy(serialized + AUTH_TOKEN_OFFSET, (char *) data.at(0), authToken.getSize());
+
+    sendMessage(peer_sock, message->getId(), serialized, msg_len);
+    free(serialized);
+
+    SD_LOG(LOG_DEBUG, "sent (%d).........%s", msg_len, message->toString().c_str());
 }
 
 static bool isAttestation(MessageID id)
@@ -1035,7 +1059,7 @@ bool Prover::toGiveup(bool success, int *bad_count, bool fullReset)
             if (fullReset)
                 *bad_count = 0;
             SD_LOG(LOG_ERR, "giving up after %d %s failures",
-                   MAX_FAILURES, fullReset ? "procedure" : "message");
+              MAX_FAILURES, fullReset ? "procedure" : "message");
             return true;
         }
     }

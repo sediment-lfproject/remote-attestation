@@ -79,7 +79,8 @@ Message * Verifier::decodeMessage(uint8_t dataArray[], uint32_t len)
     return message;
 }
 
-Message * Verifier::handleMessage(Message *message, EndpointSock *src, Device *device, uint8_t *serialized,
+Message * Verifier::handleMessage(DeviceManager &deviceManager, Message *message, EndpointSock *src, Device *device,
+  uint8_t *serialized,
   uint32_t len)
 {
     // TODO
@@ -90,10 +91,10 @@ Message * Verifier::handleMessage(Message *message, EndpointSock *src, Device *d
 
     switch (id) {
     case ATTESTATION_REQUEST:
-        response = handleAttestationRequest((AttestationRequest *) message, src, device);
+        response = handleAttestationRequest(deviceManager, (AttestationRequest *) message, src, device);
         break;
     case EVIDENCE:
-        response = handleEvidence((Evidence *) message, src, device);
+        response = handleEvidence(deviceManager, (Evidence *) message, src, device);
         break;
     case PASSPORT_RESPONSE:
         response = handlePassportResponse((PassportResponse *) message, device);
@@ -128,7 +129,8 @@ void normalizeEvidenceTypes(vector<uint8_t> &types)
     }
 }
 
-Message * Verifier::handleAttestationRequest(AttestationRequest *attReq, EndpointSock *srcEp, Device *device)
+Message * Verifier::handleAttestationRequest(DeviceManager &deviceManager, AttestationRequest *attReq,
+  EndpointSock *srcEp, Device *device)
 {
     if (device == NULL) {
         SD_LOG(LOG_ERR, "null device");
@@ -136,7 +138,7 @@ Message * Verifier::handleAttestationRequest(AttestationRequest *attReq, Endpoin
     }
 
     uint32_t cp = attReq->getCounter();
-    uint32_t cv = stoi(device->getCol(COL_SQN));
+    uint32_t cv = stoi(deviceManager.getCol(device, COL_SQN));
     if (cp <= cv) {
         SD_LOG(LOG_ERR, "out of date Attestation Request SQN: Cv=%d, Cp=%d", cv, cp);
         return NULL;
@@ -151,11 +153,11 @@ Message * Verifier::handleAttestationRequest(AttestationRequest *attReq, Endpoin
     normalizeEvidenceTypes(types);
     challenge->getEvidenceTypes().put(&types[0], types.size());
 
-    device->update(COL_SQN, to_string(cp));
+    deviceManager.update(device, COL_SQN, to_string(cp));
 
     int saved = srcEp->getPort();
     srcEp->setPort(attReq->getPort());
-    device->update(COL_PROVER_EP, "'" + srcEp->toStringOneline() + "'");
+    deviceManager.update(device, COL_PROVER_EP, srcEp->toStringOneline());
     srcEp->setPort(saved);
 
     challenge->setCounter(cp);
@@ -166,7 +168,7 @@ Message * Verifier::handleAttestationRequest(AttestationRequest *attReq, Endpoin
     return challenge;
 }
 
-Message * Verifier::handleEvidence(Evidence *evidence, EndpointSock *src, Device *device)
+Message * Verifier::handleEvidence(DeviceManager &deviceManager, Evidence *evidence, EndpointSock *src, Device *device)
 {
     if (device == NULL) {
         SD_LOG(LOG_ERR, "null device");
@@ -185,7 +187,7 @@ Message * Verifier::handleEvidence(Evidence *evidence, EndpointSock *src, Device
               << endl;
 
     string &deviceID = evidence->getDeviceID();
-    uint32_t counter = stoi(device->getCol(COL_SQN));
+    uint32_t counter = stoi(deviceManager.getCol(device, COL_SQN));
     if (counter != evidence->getCounter()) {
         SD_LOG(LOG_ERR, "unexpected SQN: %d (Verifier) v.s. %d (Prover)", counter, evidence->getCounter());
         return NULL;
@@ -249,10 +251,10 @@ Message * Verifier::handleEvidence(Evidence *evidence, EndpointSock *src, Device
             verified = false;
         }
     }
-    device->update(COL_LAST_ATTESTATION, to_string(getTimestamp()));
-    device->update(COL_STATUS, to_string(verified));
+    deviceManager.update(device, COL_LAST_ATTESTATION, to_string(getTimestamp()));
+    deviceManager.update(device, COL_STATUS, to_string(verified));
 
-    sendAlert(verified ? PASS : FAILED_ATTEST, device->getId(), src);
+    sendAlert(deviceManager, verified ? PASS : FAILED_ATTEST, device->getId(), src);
 
     if (!verified) {
         SD_LOG(LOG_ERR, "device %s not verified", deviceID.c_str());
@@ -335,7 +337,7 @@ bool Verifier::verifyFullFirmware(EvidenceItem *item, Device *device, EvidenceTy
 {
     string filename = (type == EVIDENCE_UDF_LIB) ? "lib/sediment_udf.so" : device->getFirmware();
     filename = getSedimentHome() + filename;
-    int fileSize    = getFirmwareSize(filename);
+    int fileSize = getFirmwareSize(filename);
 
     int fd = open(filename.c_str(), O_RDONLY);
     if (fd < 0) {
@@ -357,7 +359,7 @@ bool Verifier::verifyConfigs(EvidenceItem *item, Device *device, EvidenceType ty
     string filename = getSedimentHome() + device->getConfigs();
     int fileSize;
 
-    char *gatherConfigBlocks(const string &filename, int *size, int **report_interval);
+    char * gatherConfigBlocks(const string &filename, int *size, int **report_interval);
     int *dummy;
     unsigned char *bufPtr = (unsigned char *) gatherConfigBlocks(filename, &fileSize, &dummy);
     if (bufPtr == 0) {
@@ -370,7 +372,8 @@ bool Verifier::verifyConfigs(EvidenceItem *item, Device *device, EvidenceType ty
     return val;
 }
 
-bool Verifier::verifyHashing(EvidenceItem *item, Device *device, EvidenceType type, unsigned char *bufPtr, int fileSize, int fd)
+bool Verifier::verifyHashing(EvidenceItem *item, Device *device, EvidenceType type, unsigned char *bufPtr, int fileSize,
+  int fd)
 {
     EvidenceEncoding encoding = item->getEncoding();
     if (encoding != ENCODING_HMAC_SHA256) {
@@ -537,6 +540,7 @@ string Verifier::receiveDeviceID(int ctrl_sock)
 void Verifier::runService()
 {
     int cport = aService->getPort();
+    DeviceManager deviceManager(dbName);
 
     int service_sock;
     struct sockaddr_in client;
@@ -564,13 +568,13 @@ void Verifier::runService()
         if (!type.compare("ip")) {
             string addr = line.substr(space + 1);
             string ep   = "TCP:" + addr + ":8899";
-            device = Device::findDeviceByIP(ep);
+            device = deviceManager.findDeviceByIP(ep);
         }
         else if (!type.compare("id")) {
             int secondSpace = line.substr(space + 1).find(" ") + type.length();
             string deviceID = line.substr(space + 1, secondSpace - space);
-            device = Device::findDevice(deviceID);
-            sendAlert(Reason::REQUESTED, deviceID, NULL);
+            device = deviceManager.findDevice(deviceID);
+            sendAlert(deviceManager, Reason::REQUESTED, deviceID, NULL);
         }
 
         if (device == NULL) {
@@ -585,7 +589,7 @@ void Verifier::runService()
     SD_LOG(LOG_DEBUG, "control: server closed");
 }
 
-void Verifier::sendAlert(Reason reason, string deviceID, EndpointSock *src)
+void Verifier::sendAlert(DeviceManager &deviceManager, Reason reason, string deviceID, EndpointSock *src)
 {
     Alert alert;
 
@@ -621,7 +625,7 @@ void Verifier::sendAlert(Reason reason, string deviceID, EndpointSock *src)
         SD_LOG(LOG_WARNING, "alert not sent");
     }
     else {
-        finalizeAndSend(alert_sock, &alert);
+        finalizeAndSend(deviceManager, alert_sock, &alert);
         close(alert_sock);
         SD_LOG(LOG_DEBUG, "sent alert.........");
     }
@@ -631,7 +635,7 @@ void Verifier::publish(Evidence *evidence, bool verified)
 {
     if (noGUI)
         return;
-        
+
     int pub_sock = Comm::connectTcp(guiEndpoint);
 
     if (pub_sock < 0) {

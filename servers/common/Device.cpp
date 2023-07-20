@@ -7,6 +7,7 @@
 #include <sys/stat.h>
 #include <iostream>
 #include <sstream>
+#include <memory>
 
 #include "Device.hpp"
 #include "Enum.hpp"
@@ -16,31 +17,28 @@
 using json = nlohmann::json;
 using namespace std;
 
-sqlite3 *Device::deviceDB;
-
-map<string, Device *> Device::devices;
 
 static Config tmpConfig;
 
 Col cols[] = {
-    { COL_ID,               COL_TYPE_TEXT },
-    { COL_FIRMWARE,         COL_TYPE_TEXT },
-    { COL_FIRMWARE_SIZE,    COL_TYPE_INT  },
-    { COL_CONFIGS,          COL_TYPE_TEXT },
-    { COL_OS_VERSION,       COL_TYPE_TEXT },
-    { COL_VERIFIER_EP,      COL_TYPE_TEXT },
-    { COL_RELYINGPARTY_EP,  COL_TYPE_TEXT },
-    { COL_PROVER_EP,        COL_TYPE_TEXT },
-    { COL_ENCRYPTION_KEY,   COL_TYPE_BLOB },
-    { COL_ATTESTATION_KEY,  COL_TYPE_BLOB },
-    { COL_AUTH_KEY,         COL_TYPE_BLOB },
-    { COL_NONCE,            COL_TYPE_BLOB },
-    { COL_PASSPORT_EXPIRY,  COL_TYPE_INT  },
-    { COL_LAST_ATTESTATION, COL_TYPE_INT  },
-    { COL_STATUS,           COL_TYPE_INT  },
-    { COL_SQN,              COL_TYPE_INT  },
-    { COL_SEEC_SQN,         COL_TYPE_INT  },    
-    { COL_EVIDENCE_TYPES,   COL_TYPE_TEXT },
+    { COL_ID,               COL_TYPE_TEXT               },
+    { COL_FIRMWARE,         COL_TYPE_TEXT               },
+    { COL_FIRMWARE_SIZE,    COL_TYPE_INT                },
+    { COL_CONFIGS,          COL_TYPE_TEXT               },
+    { COL_OS_VERSION,       COL_TYPE_TEXT               },
+    { COL_VERIFIER_EP,      COL_TYPE_TEXT               },
+    { COL_RELYINGPARTY_EP,  COL_TYPE_TEXT               },
+    { COL_PROVER_EP,        COL_TYPE_TEXT               },
+    { COL_ENCRYPTION_KEY,   COL_TYPE_BLOB               },
+    { COL_ATTESTATION_KEY,  COL_TYPE_BLOB               },
+    { COL_AUTH_KEY,         COL_TYPE_BLOB               },
+    { COL_NONCE,            COL_TYPE_BLOB               },
+    { COL_PASSPORT_EXPIRY,  COL_TYPE_INT                },
+    { COL_LAST_ATTESTATION, COL_TYPE_INT                },
+    { COL_STATUS,           COL_TYPE_INT                },
+    { COL_SQN,              COL_TYPE_INT                },
+    { COL_SEEC_SQN,         COL_TYPE_INT                },
+    { COL_EVIDENCE_TYPES,   COL_TYPE_TEXT               },
 };
 
 void toEndpoint(Endpoint &endpoint, nlohmann::basic_json<> value)
@@ -98,7 +96,7 @@ Device::Device(nlohmann::basic_json<> value, Config &config) :
         }
         else if (!key.compare(COL_CONFIGS)) {
             configs = el.value().get<string>();
-        }        
+        }
         else if (!key.compare(COL_OS_VERSION)) {
             osVersion = el.value().get<string>();
         }
@@ -154,7 +152,7 @@ Device::Device(nlohmann::basic_json<> value, Config &config) :
         }
         else if (!key.compare(COL_SEEC_SQN)) {
             seecSqn = el.value().get<int>();
-        }        
+        }
         else if (!key.compare(COL_EVIDENCE_TYPES)) {
             string src = el.value().get<string>();
             parseEvidenceTypes(src, evidenceTypes);
@@ -165,7 +163,7 @@ Device::Device(nlohmann::basic_json<> value, Config &config) :
     }
 }
 
-void Device::deleteDevice(Device *device)
+void SQLiteDeviceManager::deleteDevice(Device *device)
 {
     string sql = "DELETE FROM Device WHERE ID = '" + device->getId() + "';";
 
@@ -178,12 +176,12 @@ void Device::deleteDevice(Device *device)
     }
 }
 
-int Device::insertDevice(Device *device)
+void SQLiteDeviceManager::insertDevice(Device *device)
 {
-    return insertDevice(device->toString());
+    insertDevice(device->toString());
 }
 
-int Device::insertDevice(string device)
+void SQLiteDeviceManager::insertDevice(string device)
 {
     string sql("INSERT OR REPLACE INTO Device VALUES(" + device + ");");
 
@@ -199,11 +197,9 @@ int Device::insertDevice(string device)
         id = id.substr(1, id.find("'", 1) - 1); // remove quotes
         SD_LOG(LOG_DEBUG, "device %s", id.c_str());
     }
-
-    return 0;
 }
 
-int populateDevice(Device *device, sqlite3_stmt *statement)
+int populateDeviceSqlite(Device *device, sqlite3_stmt *statement)
 {
     int i;
 
@@ -220,7 +216,7 @@ int populateDevice(Device *device, sqlite3_stmt *statement)
             else if (!strcmp(name, COL_FIRMWARE))
                 device->setFirmware(value);
             else if (!strcmp(name, COL_CONFIGS))
-                device->setConfigs(value);                
+                device->setConfigs(value);
             else if (!strcmp(name, COL_OS_VERSION))
                 device->setOsVersion(value);
             else if (!strcmp(name, COL_VERIFIER_EP)) {
@@ -253,7 +249,7 @@ int populateDevice(Device *device, sqlite3_stmt *statement)
             else if (!strcmp(name, COL_SQN))
                 device->setSqn(value);
             else if (!strcmp(name, COL_SEEC_SQN))
-                device->setSeecSqn(value);                
+                device->setSeecSqn(value);
             else {
                 SD_LOG(LOG_ERR, "char column not recogized: %s", cols[i].name);
             }
@@ -287,7 +283,7 @@ int populateDevice(Device *device, sqlite3_stmt *statement)
     return 0;
 }
 
-Device * Device::selectDevice(string col, string &value)
+Device * SQLiteDeviceManager::selectDevice(string col, string &value)
 {
     int result;
     Device *device = new Device(tmpConfig);
@@ -307,7 +303,7 @@ Device * Device::selectDevice(string col, string &value)
         SD_LOG(LOG_ERR, "no such device: %s=%s", col.c_str(), value.c_str());
         goto err;
     }
-    populateDevice(device, statement);
+    populateDeviceSqlite(device, statement);
 
     sqlite3_finalize(statement);
 
@@ -318,8 +314,9 @@ err:
     return NULL;
 }
 
-void Device::update(string col, string value)
+void SQLiteDeviceManager::update(Device *device, string col, string value)
 {
+    string id  = device->getId();
     string sql = "UPDATE Device SET " + col + " = " + value + " WHERE id = '" + id + "'";
 
     char *msg;
@@ -331,8 +328,9 @@ void Device::update(string col, string value)
     }
 }
 
-string Device::getCol(string col)
+string SQLiteDeviceManager::getCol(Device *device, string col)
 {
+    string id = device->getId();
     string sqlplus("SELECT " + col + " FROM Device " + " WHERE ID = '" + id + "'");
 
     sqlite3_stmt *statement;
@@ -357,7 +355,7 @@ string Device::getCol(string col)
     return value;
 }
 
-void Device::createDeviceTable()
+void SQLiteDeviceManager::createDeviceTable()
 {
     string sql = "CREATE TABLE IF NOT EXISTS Device("
       COL_ID               " TEXT PRIMARY KEY     NOT NULL, "
@@ -376,7 +374,7 @@ void Device::createDeviceTable()
       COL_LAST_ATTESTATION " INT, "
       COL_STATUS           " INT, "
       COL_SQN              " INT, "
-      COL_SEEC_SQN         " INT, "      
+      COL_SEEC_SQN         " INT, "
       COL_EVIDENCE_TYPES   " TEXT);";
 
     char *msg;
@@ -420,11 +418,11 @@ string Device::toString()
            + to_string(lastAttestation) + ", "
            + to_string(status) + ", "
            + to_string(sqn) + ", "
-           + to_string(seecSqn) + ", "           
+           + to_string(seecSqn) + ", "
            + "'" + convertEvidenceTypes() + "'";
 }
 
-void Device::open(const string &dbName)
+SQLiteDeviceManager::SQLiteDeviceManager(const string &dbName)
 {
     //    tmpConfig = config;
     //    string &database = config.getDatabase();
@@ -446,7 +444,158 @@ void Device::open(const string &dbName)
     createDeviceTable();
 }
 
-Device * Device::findDevice(string &deviceID)
+SQLiteDeviceManager::~SQLiteDeviceManager()
+{
+    sqlite3_close(deviceDB);
+}
+
+Device * SQLiteDeviceManager::findDevice(string &deviceID)
+{
+    map<string, Device *>::const_iterator it = SQLiteDeviceManager::devices.find(deviceID);
+
+    if (it != devices.end()) {
+        return (Device *) it->second;
+    }
+
+    Device *device = selectDevice(COL_ID, deviceID);
+    if (device != NULL) {
+        devices[device->getId()] = device;
+    }
+    return device;
+}
+
+Device * SQLiteDeviceManager::findDeviceByIP(string &ip)
+{
+    Device *device = selectDevice(COL_PROVER_EP, ip);
+
+    if (device != NULL) {
+        devices[device->getId()] = device;
+    }
+    return device;
+}
+
+struct DBInfo {
+    string url, user, pass, db;
+    DBInfo(string url, string user, string pass, string db) : url(url), user(user), pass(pass), db(db){ }
+};
+
+static DBInfo parse_dbinfo(const string& input)
+{
+    string inp = input;
+
+    string delimiter = ",";
+    size_t comma1    = inp.find(delimiter);
+    string url       = inp.substr(0, comma1);
+
+    inp = inp.substr(comma1 + 1);
+    size_t comma2 = inp.find(delimiter);
+    string user   = inp.substr(0, comma2);
+
+    inp = inp.substr(comma2 + 1);
+    size_t comma3 = inp.find(delimiter);
+    string pass   = inp.substr(0, comma3);
+
+    string db = inp.substr(comma3 + 1);
+    return DBInfo(url, user, pass, db);
+}
+
+static std::unique_ptr<sql::Connection> init_conn(DBInfo info)
+{
+    sql::Driver *driver = get_driver_instance();
+
+    return std::unique_ptr<sql::Connection>(driver->connect(info.url, info.user, info.pass));
+}
+
+MySQLDeviceManager::MySQLDeviceManager(const string &inp) : conn(init_conn(parse_dbinfo(inp)))
+{
+    DBInfo info = parse_dbinfo(inp);
+    conn->setSchema(info.db);
+    createDeviceTable();
+}
+
+void MySQLDeviceManager::createDeviceTable()
+{
+    std::unique_ptr<sql::Statement> stmt(conn->createStatement());
+    string sql = "CREATE TABLE IF NOT EXISTS Device("
+      COL_ID               " VARCHAR(200) PRIMARY KEY     NOT NULL, "
+      COL_FIRMWARE         " TEXT NOT NULL, "
+      COL_FIRMWARE_SIZE    " INT  NOT NULL, "
+      COL_CONFIGS          " TEXT NOT NULL, "
+      COL_OS_VERSION       " TEXT NOT NULL, "
+      COL_VERIFIER_EP      " TEXT  NOT NULL, "
+      COL_RELYINGPARTY_EP  " TEXT  NOT NULL, "
+      COL_PROVER_EP        " TEXT  NOT NULL, "
+      COL_ENCRYPTION_KEY   " BLOB, "
+      COL_ATTESTATION_KEY  " BLOB, "
+      COL_AUTH_KEY         " BLOB, "
+      COL_NONCE            " BLOB, "
+      COL_PASSPORT_EXPIRY  " INT, "
+      COL_LAST_ATTESTATION " INT, "
+      COL_STATUS           " INT, "
+      COL_SQN              " INT, "
+      COL_SEEC_SQN         " INT, "
+      COL_EVIDENCE_TYPES   " TEXT);";
+    stmt->execute(sql);
+}
+
+void MySQLDeviceManager::populateDevice(Device *device, std::unique_ptr<sql::ResultSet> res)
+{
+    if (!res->first()) {
+        SD_LOG(LOG_ERR, "Could not get result from database");
+        return;
+    }
+    device->setId(res->getString(COL_ID));
+    device->setFirmware(res->getString(COL_FIRMWARE));
+    device->setFirmwareSize(res->getInt(COL_FIRMWARE_SIZE));
+    device->setConfigs(res->getString(COL_CONFIGS));
+    device->setOsVersion(res->getString(COL_OS_VERSION));
+
+    Endpoint vep(res->getString(COL_VERIFIER_EP));
+    Endpoint rep(res->getString(COL_RELYINGPARTY_EP));
+    Endpoint pep(res->getString(COL_PROVER_EP));
+    device->setVerifierEndpoint(vep);
+    device->setRelyingPartyEndpoint(rep);
+    device->setProverEndpoint(pep);
+
+    Seec *seec     = device->getSeec();
+    Crypto *crypto = seec->getCrypto();
+
+    string encryptionKey  = res->getString(COL_ENCRYPTION_KEY);
+    string attestationKey = res->getString(COL_ATTESTATION_KEY);
+    string authKey        = res->getString(COL_AUTH_KEY);
+    crypto->changeKey(KEY_ENCRYPTION, (unsigned char *) (encryptionKey.c_str()), encryptionKey.length());
+    crypto->changeKey(KEY_ATTESTATION, (unsigned char *) (attestationKey.c_str()), attestationKey.length());
+    crypto->changeKey(KEY_AUTH, (unsigned char *) (authKey.c_str()), authKey.length());
+
+    string nonceStr        = res->getString(COL_NONCE);
+    vector<uint8_t> &nonce = device->getNonce();
+    nonce.resize(nonceStr.length());
+    memcpy(&nonce[0], nonceStr.c_str(), nonceStr.length());
+
+    device->setPassportExpiryDate(res->getInt(COL_PASSPORT_EXPIRY));
+    device->setLastAttestation(res->getInt(COL_LAST_ATTESTATION));
+    device->setStatus((bool) res->getInt(COL_STATUS));
+    device->setSqn(res->getInt(COL_SQN));
+    device->setSeecSqn(res->getInt(COL_SEEC_SQN));
+
+    string evidenceTypes(res->getString(COL_EVIDENCE_TYPES));
+    parseEvidenceTypes(evidenceTypes, device->getEvidenceTypes());
+}
+
+Device * MySQLDeviceManager::selectDevice(string col, string &value)
+{
+    Device *device = new Device(tmpConfig);
+
+    std::unique_ptr<sql::PreparedStatement> stmt(conn->prepareStatement("SELECT * FROM Device WHERE " + col + " = ?"));
+    stmt->setString(1, value);
+    std::unique_ptr<sql::ResultSet> res(stmt->executeQuery());
+
+    MySQLDeviceManager::populateDevice(device, std::move(res));
+
+    return device;
+}
+
+Device * MySQLDeviceManager::findDevice(string &deviceID)
 {
     map<string, Device *>::const_iterator it = devices.find(deviceID);
 
@@ -461,7 +610,7 @@ Device * Device::findDevice(string &deviceID)
     return device;
 }
 
-Device * Device::findDeviceByIP(string &ip)
+Device * MySQLDeviceManager::findDeviceByIP(string &ip)
 {
     Device *device = selectDevice(COL_PROVER_EP, ip);
 
@@ -469,4 +618,37 @@ Device * Device::findDeviceByIP(string &ip)
         devices[device->getId()] = device;
     }
     return device;
+}
+
+void MySQLDeviceManager::insertDevice(string device)
+{
+    std::unique_ptr<sql::PreparedStatement> stmt(conn->prepareStatement("INSERT OR REPLACE INTO Device VALUES(?)"));
+    stmt->setString(1, device);
+    stmt->execute();
+}
+
+void MySQLDeviceManager::insertDevice(Device *device)
+{
+    insertDevice(device->toString());
+}
+
+void MySQLDeviceManager::update(Device *device, string col, string value)
+{
+    std::unique_ptr<sql::PreparedStatement> stmt(conn->prepareStatement(
+          "UPDATE Device SET " + col + " = (?) WHERE id = ?"));
+    stmt->setString(1, value);
+    stmt->setString(2, device->getId());
+    stmt->execute();
+}
+
+string MySQLDeviceManager::getCol(Device *device, string col)
+{
+    std::unique_ptr<sql::PreparedStatement> stmt(conn->prepareStatement("SELECT " + col + " FROM Device WHERE id = ?"));
+    stmt->setString(1, device->getId());
+    std::unique_ptr<sql::ResultSet> res(stmt->executeQuery());
+
+    if (!res->first()) {
+        SD_LOG(LOG_ERR, "Could not fetch result from database");
+    }
+    return res->getString(col);
 }
