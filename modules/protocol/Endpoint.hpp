@@ -10,6 +10,7 @@
 
 #include "Enum.hpp"
 #include "Codec.hpp"
+#include "Log.hpp"
 
 #define PROTOCOL_LEN 1
 #define ADDRESS_LEN  1

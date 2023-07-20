@@ -23,6 +23,7 @@ sudo apt-get install -y libsqlite3-dev
 sudo apt-get install -y mosquitto
 sudo apt-get install -y sqlite3
 sudo apt-get install -y libsqlite3-dev
+sudo apt-get install -y libmysqlcppconn-dev
 
 echo "Please download and install mbedtls version 3.1.0 from https://github.com/Mbed-TLS/mbedtls."
 echo "The latest version may also work, but 3.1.0 is the version tested."

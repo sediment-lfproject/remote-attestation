@@ -135,7 +135,6 @@ public:
         memcpy((char *) saved, (char *) &digest[0], digest.size());
 
         calDigest(authToken, serialized, len, offset);
-
         if (memcmp((char *) &digest[0], saved, digest.size()) == 0) {
             return true;
         }
@@ -177,5 +176,4 @@ public:
 
         return true;
     }
-
 };

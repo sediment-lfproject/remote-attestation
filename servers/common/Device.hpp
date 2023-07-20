@@ -8,6 +8,12 @@
 
 #include <fstream>
 #include <sqlite3.h>
+#include <memory>
+#include <cppconn/driver.h>
+#include <cppconn/exception.h>
+#include <cppconn/resultset.h>
+#include <cppconn/statement.h>
+#include <cppconn/prepared_statement.h>
 
 #include "Seec.hpp"
 #include "Crypto.hpp"
@@ -51,12 +57,10 @@ typedef struct _col {
     char        type;
 } Col;
 
+
 class Device
 {
 private:
-    static map<string, Device *> devices;
-    static sqlite3 *deviceDB;
-
     string id;
     string firmware;
     string osVersion;
@@ -77,7 +81,7 @@ private:
     TimeStamp lastAttestation;
     bool status = false;
     uint32_t sqn;
-    uint32_t seecSqn;    
+    uint32_t seecSqn;
     vector<uint8_t> evidenceTypes;
 
 public:
@@ -87,23 +91,8 @@ public:
         seec(config)
     { }
 
-    static Device * findDevice(string &serial);
-    static Device * findDeviceByIP(string &ip);
-
-    static int callback(void *data, int argc, char **argv, char **azColName);
-    static void deleteDevice(Device *device);
-    static int insertEndpoint(Endpoint *endpoint);
-    static int insertDevice(Device *device);
-    static int insertDevice(string device);
-    static int selectEndpoint(int endpointId);
-    static Device * selectDevice(string col, string &value);
-    static void createEndpointTable();
-    static void createDeviceTable();
-    static void open(const string &dbName);
     string convertEvidenceTypes();
 
-    void update(string col, string value);
-    string getCol(string col);
 
     string toString();
 
@@ -228,6 +217,7 @@ public:
     {
         this->configs = configs;
     }
+
     void setOsVersion(string osVersion)
     {
         this->osVersion = osVersion;
@@ -307,3 +297,126 @@ public:
         nonce = src;
     }
 };
+
+class SQLiteDeviceManager
+{
+private:
+    map<string, Device *> devices;
+    sqlite3 *deviceDB;
+public:
+    SQLiteDeviceManager(const string &dbName);
+    ~SQLiteDeviceManager();
+
+    // DeviceManagers should not be copied
+    void operator = (SQLiteDeviceManager const &)    = delete;
+    SQLiteDeviceManager(SQLiteDeviceManager const &) = delete;
+
+    Device * findDevice(string &serial);
+    Device * findDeviceByIP(string &ip);
+    void deleteDevice(Device *device);
+    void insertDevice(Device *device);
+    void insertDevice(string device);
+    Device * selectDevice(string col, string &value);
+    void createDeviceTable();
+    string getCol(Device *device, string col);
+    void update(Device *device, string col, string value);
+};
+
+class MySQLDeviceManager
+{
+private:
+    map<string, Device *> devices;
+    std::unique_ptr<sql::Connection> conn;
+
+    void populateDevice(Device *device, std::unique_ptr<sql::ResultSet> res);
+public:
+    MySQLDeviceManager(const string &dbName);
+
+    // DeviceManagers should not be copied
+    // operator=(const MySQLDeviceManager &other) = delete;
+    // MySQLDeviceManager(const MySQLDeviceManager &other) = delete;
+
+    Device * findDevice(string &serial);
+    Device * findDeviceByIP(string &ip);
+    void deleteDevice(Device *device);
+    void insertDevice(Device *device);
+    void insertDevice(string device);
+    Device * selectDevice(string col, string &value);
+    void createDeviceTable();
+    string getCol(Device *device, string col);
+    void update(Device *device, string col, string value);
+};
+
+typedef MySQLDeviceManager DeviceManager;
+
+// enum DBType { SQLite, MySQL };
+
+// template <DBType T> class DeviceManager
+// {
+// private:
+//     static map<string, Device *> devices;
+// public:
+//     static Device* findDevice(string &serial);
+//     static Device* findDeviceByIP(string &ip);
+//     static int callback(void *data, int argc, char **argv, char **azColName);
+//     static void deleteDevice(Device *device);
+//     static int insertEndpoint(Endpoint *endpoint);
+//     static int insertDevice(Device *device);
+//     static int insertDevice(string device);
+//     static int selectEndpoint(int endpointId);
+//     static Device* selectDevice(string col, string &value);
+//     static void createEndpointTable();
+//     static void createDeviceTable();
+//     static void open(const string &dbName);
+//     static string getCol(Device *device, string col);
+//     static void update(Device *device, string col, string value);
+// };
+
+// typedef DeviceManager<SQLite> SQLiteDeviceManager;
+// typedef DeviceManager<MySQL> MySQLDeviceManager;
+
+// template <> class DeviceManager<SQLite>
+// {
+// private:
+//     static map<string, Device *> devices;
+//     static sqlite3 *deviceDB;
+// public:
+//     static Device* findDevice(string &serial);
+//     static Device* findDeviceByIP(string &ip);
+//     static int callback(void *data, int argc, char **argv, char **azColName);
+//     static void deleteDevice(Device *device);
+//     static int insertEndpoint(Endpoint *endpoint);
+//     static int insertDevice(Device *device);
+//     static int insertDevice(string device);
+//     static int selectEndpoint(int endpointId);
+//     static Device* selectDevice(string col, string &value);
+//     static void createEndpointTable();
+//     static void createDeviceTable();
+//     static void open(const string &dbName);
+//     static string getCol(Device *device, string col);
+//     static void update(Device *device, string col, string value);
+// };
+
+// template <> class DeviceManager<MySQL>
+// {
+// private:
+//     static map<string, Device *> devices;
+//     static sql::Connection *conn;
+//     static sql::Statement *stmt;
+//     static void populateDevice(Device *device, sql::ResultSet *res);
+// public:
+//     static Device* findDevice(string &serial);
+//     static Device* findDeviceByIP(string &ip);
+//     static int callback(void *data, int argc, char **argv, char **azColName);
+//     static void deleteDevice(Device *device);
+//     static int insertEndpoint(Endpoint *endpoint);
+//     static int insertDevice(Device *device);
+//     static int insertDevice(string device);
+//     static int selectEndpoint(int endpointId);
+//     static Device* selectDevice(string col, string &value);
+//     static void createEndpointTable();
+//     static void createDeviceTable();
+//     static void open(const string &dbName);
+//     static string getCol(Device *device, string col);
+//     static void update(Device *device, string col, string value);
+// };

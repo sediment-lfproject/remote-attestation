@@ -39,7 +39,7 @@ protected:
         return NULL;
     }
 
-    virtual void calAuthToken(Message *message, uint8_t *serialized, uint32_t len) = 0;
+    // virtual void calAuthToken(Message *message, uint8_t *serialized, uint32_t len) = 0;
     virtual void setTimestamp(Message *message) = 0;
 
 public:
@@ -54,7 +54,7 @@ public:
     virtual ~StateMachine()
     { }
 
-    virtual void finalizeAndSend(int peer_sock, Message *message);
+    // virtual void finalizeAndSend(int peer_sock, Message *message);
     virtual bool sendMessage(int peer_sock, MessageID messageID, uint8_t *serialized, uint32_t msg_len);
 
     const Endpoint& getEndpoint() const
