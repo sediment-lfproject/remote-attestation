@@ -80,7 +80,7 @@ static Item flash_items[] = {
     { NV_RSA_VERIFY_SIZE,  NV_OFFSET_RSA_VERIFY_SIZE,  NV_LEN_RSA_VERIFY_SIZE,  NV_TYPE_INT                 },
     { NV_RSA_VERIFY,       NV_OFFSET_RSA_VERIFY,       NV_LEN_RSA_VERIFY,       NV_TYPE_LINE                },
 
-    { NV_DOWNLOAD,         NV_OFFSET_DOWNLOAD,         NV_LEN_DOWNLOAD,         NV_TYPE_INT                 },
+    { NV_DOWNLOAD,         NV_OFFSET_DOWNLOAD,         NV_LEN_DOWNLOAD,         NV_TYPE_BOOL                 },
     { NV_DATA_TRANSPORT,   NV_OFFSET_DATA_TRANSPORT,   NV_LEN_DATA_TRANSPORT,   NV_TYPE_CHAR                },
     { NV_LOG_LEVEL,        NV_OFFSET_LOG_LEVEL,        NV_LEN_LOG_LEVEL,        NV_TYPE_INT                 },
 };
