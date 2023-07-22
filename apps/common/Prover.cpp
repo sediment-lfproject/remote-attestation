@@ -137,7 +137,7 @@ void Prover::pause(int bad_proc_count)
     int delay = 0;
 
     if (expecting == DATA) {
-        if (cause == CAUSE_PERIODIC) {
+        if (cause == CAUSE_PERIODIC || cause == CAUSE_DATA_REJECTED) {
             delay = config.getReportInterval();
             // delay = board->getReportInterval();  // for demo purposes, the interval is reloaded each time
         }
@@ -363,12 +363,8 @@ bool Prover::handleConfig(Message *received)
     if (board != NULL)
         board->setBaseTime(received->getTimestamp());
 
-    if (!config.isAttestationEnabled()) {
-        transit(DATA, CAUSE_POWER_ON);
-    }
-    else {
-        transit(PASSPORT_REQUEST, CAUSE_INIT);
-    }
+    conditional_transit(CAUSE_INIT, CAUSE_POWER_ON);
+
     return true;
 }
 
@@ -729,15 +725,15 @@ bool Prover::handleResult(Message *received)
         rejectCount++;
         if (rejectCount >= MAX_REJECT) {
             rejectCount = 0;
-            transit(PASSPORT_REQUEST, CAUSE_DATA_REJECTED);
+            conditional_transit(CAUSE_DATA_REJECTED, CAUSE_DATA_REJECTED);
         }
     }
     else if (acceptance == ATTEST) {
         rejectCount = 0;
-        transit(PASSPORT_REQUEST, CAUSE_REQUESTED);
+        conditional_transit(CAUSE_REQUESTED, CAUSE_REQUESTED);
     }
     else if (isPassportExipred()) {
-        transit(PASSPORT_REQUEST, CAUSE_INVALID_PASSPORT);
+        conditional_transit(CAUSE_INVALID_PASSPORT, CAUSE_INVALID_PASSPORT);
     }
     else if (acceptance == ACCEPT) {
         rejectCount = 0;
@@ -987,10 +983,20 @@ static bool isAttestation(MessageID id)
     }
 }
 
+void Prover::conditional_transit(Cause attest, Cause no_attest)
+{
+    if (!config.isAttestationEnabled()) {
+        transit(DATA, no_attest);
+    }
+    else {
+        transit(PASSPORT_REQUEST, attest);
+    }
+}
+
 void Prover::resetProcedure(bool fullReset)
 {
     if (fullReset) {
-        transit(PASSPORT_REQUEST, CAUSE_RESET);
+        conditional_transit(CAUSE_RESET, CAUSE_RESET);
         full_reset_count++;
         return;
     }
