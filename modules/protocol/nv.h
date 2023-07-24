@@ -130,38 +130,10 @@ extern "C" {
 #define NV_LEN_DOWNLOAD           4
 #define NV_OFFSET_DOWNLOAD        (NV_OFFSET_LOG_LEVEL + NV_LEN_LOG_LEVEL)
 
-#define NV_MQTT_URL               "mqtt_url"
-#define NV_LEN_MQTT_URL           32
-#define NV_OFFSET_MQTT_URL        (NV_OFFSET_DOWNLOAD + NV_LEN_DOWNLOAD)
-
-#define NV_MQTT_PUB_TOPIC         "mqtt_pub_topic"
-#define NV_LEN_MQTT_PUB_TOPIC     16
-#define NV_OFFSET_MQTT_PUB_TOPIC  (NV_OFFSET_MQTT_URL + NV_LEN_MQTT_URL)
-
-#define NV_MQTT_SUB_TOPIC         "mqtt_sub_topic"
-#define NV_LEN_MQTT_SUB_TOPIC     16
-#define NV_OFFSET_MQTT_SUB_TOPIC  (NV_OFFSET_MQTT_PUB_TOPIC + NV_LEN_MQTT_PUB_TOPIC)
-
-#define NV_MQTT_REV_TOPIC         "mqtt_rev_topic"
-#define NV_LEN_MQTT_REV_TOPIC     16
-#define NV_OFFSET_MQTT_REV_TOPIC  (NV_OFFSET_MQTT_SUB_TOPIC + NV_LEN_MQTT_SUB_TOPIC)
-
-#define NV_REV_PROTOCOL           "rev_protocol"
-#define NV_LEN_REV_PROTOCOL       8
-#define NV_OFFSET_REV_PROTOCOL    (NV_OFFSET_MQTT_REV_TOPIC + NV_LEN_MQTT_REV_TOPIC)
-
-#define NV_REV_ADDRESS            "rev_address"
-#define NV_LEN_REV_ADDRESS        32
-#define NV_OFFSET_REV_ADDRESS     (NV_OFFSET_REV_PROTOCOL + NV_LEN_REV_PROTOCOL)
-
-#define NV_REV_PORT               "rev_port"
-#define NV_LEN_REV_PORT           4
-#define NV_OFFSET_REV_PORT        (NV_OFFSET_REV_ADDRESS + NV_LEN_REV_ADDRESS)
-
 // The following are expected to be changed during device operation
 #define NV_ENC_KEY              "enc_key"
 #define NV_LEN_ENC_KEY          32
-#define NV_OFFSET_ENC_KEY       (NV_OFFSET_REV_PORT + NV_LEN_REV_PORT)
+#define NV_OFFSET_ENC_KEY       (NV_OFFSET_DOWNLOAD + NV_LEN_DOWNLOAD)
 
 #define NV_ATTEST_KEY           "attest_key"
 #define NV_LEN_ATTEST_KEY       32
@@ -226,6 +198,35 @@ extern "C" {
 #define NV_AUTH_KEY             "auth_key"
 #define NV_LEN_AUTH_KEY         32
 #define NV_OFFSET_AUTH_KEY      (NV_OFFSET_REVKEY + NV_LEN_REVKEY)
+
+#define NV_MQTT_URL               "mqtt_url"
+#define NV_LEN_MQTT_URL           32
+#define NV_OFFSET_MQTT_URL        (NV_OFFSET_AUTH_KEY + NV_LEN_AUTH_KEY)
+
+#define NV_MQTT_PUB_TOPIC         "mqtt_pub_topic"
+#define NV_LEN_MQTT_PUB_TOPIC     16
+#define NV_OFFSET_MQTT_PUB_TOPIC  (NV_OFFSET_MQTT_URL + NV_LEN_MQTT_URL)
+
+#define NV_MQTT_SUB_TOPIC         "mqtt_sub_topic"
+#define NV_LEN_MQTT_SUB_TOPIC     16
+#define NV_OFFSET_MQTT_SUB_TOPIC  (NV_OFFSET_MQTT_PUB_TOPIC + NV_LEN_MQTT_PUB_TOPIC)
+
+#define NV_MQTT_REV_TOPIC         "mqtt_rev_topic"
+#define NV_LEN_MQTT_REV_TOPIC     16
+#define NV_OFFSET_MQTT_REV_TOPIC  (NV_OFFSET_MQTT_SUB_TOPIC + NV_LEN_MQTT_SUB_TOPIC)
+
+#define NV_REV_PROTOCOL           "rev_protocol"
+#define NV_LEN_REV_PROTOCOL       8
+#define NV_OFFSET_REV_PROTOCOL    (NV_OFFSET_MQTT_REV_TOPIC + NV_LEN_MQTT_REV_TOPIC)
+
+#define NV_REV_ADDRESS            "rev_address"
+#define NV_LEN_REV_ADDRESS        32
+#define NV_OFFSET_REV_ADDRESS     (NV_OFFSET_REV_PROTOCOL + NV_LEN_REV_PROTOCOL)
+
+#define NV_REV_PORT               "rev_port"
+#define NV_LEN_REV_PORT           4
+#define NV_OFFSET_REV_PORT        (NV_OFFSET_REV_ADDRESS + NV_LEN_REV_ADDRESS)
+
 
 #define NV_PROVER               "prover"
 #define NV_VERIFIER             "verifier"

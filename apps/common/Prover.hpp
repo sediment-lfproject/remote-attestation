@@ -83,7 +83,8 @@ protected:
     void resetProcedure(bool proc);
     bool toGiveup(bool msg_success, int *bad_msg_count, bool fullReset);
     bool isPassportExipred();
-    
+    void conditional_transit(Cause attest, Cause no_attest);
+
     void transit(MessageID state, Cause cause) {
         this->expecting = state;
         this->cause = cause;

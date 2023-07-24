@@ -364,21 +364,31 @@ void Firewall::carbonCopy(Endpoint &endpoint, Message *message)
 Acceptance Firewall::forward(Data *data, Config &config, uint8_t *serialized, uint32_t len)
 {
     string &deviceID = data->getDeviceID();
-    auto map         = actions.find(deviceID);
     Acceptance accept;
+
+    if (!config.isAttestationEnabled()) {
+        accept = ACCEPT;
+    }
+    else {
+        auto map         = actions.find(deviceID);
+        if (map == actions.end()) {
+            SD_LOG(LOG_ERR, "device not found: %s", deviceID.c_str());
+             accept = REJECT;
+        }
+        else if (map->second != CORRECT) {
+            SD_LOG(LOG_WARNING, "device attestion is incorrect or no longer valid: %s", deviceID.c_str());
+            accept = REJECT;
+        }
+        else
+            accept = ACCEPT;
+    }
+
     Vector &payload = data->getPayload();
-
-    if (map == actions.end()) {
-        SD_LOG(LOG_ERR, "device not found: %s", deviceID.c_str());
-    }
-    else if (map->second != CORRECT) {
-        SD_LOG(LOG_WARNING, "device attestion is incorrect or no longer valid: %s", deviceID.c_str());
-    }
-
     string payloadStr((const char *) payload.at(0));
     if (config.isEncryptionEnabled())
         payloadStr = Log::toHex(payload).c_str();
-    if (map == actions.end() || map->second != CORRECT) {
+
+    if (accept != ACCEPT) {
         Log::plain(COLOR_RED, "DROP %11s %s", deviceID.c_str(), payloadStr.c_str());
         accept = REJECT;
     }
@@ -388,17 +398,16 @@ Acceptance Firewall::forward(Data *data, Config &config, uint8_t *serialized, ui
         int sock = Comm::connectTcp(appSvrEndpoint);
         if (sock < 0) {
             SD_LOG(LOG_ERR, "failed to connect: %s", appSvrEndpoint->toStringOneline().c_str());
-            accept = REJECT;
+            accept = NO_COMM;
         }
         else {
             bool sent = sendMessage(sock, DATA, serialized, len);
             close(sock);
             if (sent) {
-                SD_LOG(LOG_DEBUG, "sent alert.........");
                 accept = ACCEPT;
             }
             else {
-                accept = REJECT;
+                accept = NO_COMM;
             }
         }
     }
