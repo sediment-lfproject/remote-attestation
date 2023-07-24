@@ -156,14 +156,16 @@ bool isVariableLen(string key)
 {
     return !(key.compare(NV_PARAMS) &&
              key.compare(NV_SIGNKEY) &&
-             key.compare(NV_URIPATH) &&
+             key.compare(NV_EURIPATH) &&
+             key.compare(NV_SURIPATH) &&
              key.compare(NV_TIMEPATH));
 }
 
 bool isVariableLenSize(string key)
 {
     return !(key.compare(NV_PARAMS_SIZE) &&
-             key.compare(NV_URIPATH_SIZE) &&
+             key.compare(NV_EURIPATH_SIZE) &&
+             key.compare(NV_SURIPATH_SIZE) &&
              key.compare(NV_TIMEPATH_SIZE) &&
              key.compare(NV_SIGNKEY_SIZE));
 }
