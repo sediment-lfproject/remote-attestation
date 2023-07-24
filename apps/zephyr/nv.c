@@ -50,6 +50,10 @@ static Item flash_items[] = {
     { NV_MQTT_PUB_TOPIC,   NV_OFFSET_MQTT_PUB_TOPIC,   NV_LEN_MQTT_PUB_TOPIC,   NV_TYPE_CHAR                },
     { NV_MQTT_SUB_TOPIC,   NV_OFFSET_MQTT_SUB_TOPIC,   NV_LEN_MQTT_SUB_TOPIC,   NV_TYPE_CHAR                },
 
+    { NV_REV_PROTOCOL,     NV_OFFSET_REV_PROTOCOL,     NV_LEN_REV_PROTOCOL,     NV_TYPE_CHAR                },
+    { NV_REV_ADDRESS,      NV_OFFSET_REV_ADDRESS,      NV_LEN_REV_ADDRESS,      NV_TYPE_CHAR                },
+    { NV_REV_PORT,         NV_OFFSET_REV_PORT,         NV_LEN_REV_PORT,         NV_TYPE_INT                 },
+
     { NV_ENC_KEY,          NV_OFFSET_ENC_KEY,          NV_LEN_ENC_KEY,          NV_TYPE_BYTE                },
     { NV_ATTEST_KEY,       NV_OFFSET_ATTEST_KEY,       NV_LEN_ATTEST_KEY,       NV_TYPE_BYTE                },
     { NV_AUTH_KEY,         NV_OFFSET_AUTH_KEY,         NV_LEN_AUTH_KEY,         NV_TYPE_BYTE                },
