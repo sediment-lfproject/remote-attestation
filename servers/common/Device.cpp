@@ -31,6 +31,7 @@ Col cols[] = {
     { COL_VERIFIER_EP,      COL_TYPE_TEXT },
     { COL_RELYINGPARTY_EP,  COL_TYPE_TEXT },
     { COL_PROVER_EP,        COL_TYPE_TEXT },
+    { COL_REVOCATION_EP,    COL_TYPE_TEXT },
     { COL_ENCRYPTION_KEY,   COL_TYPE_BLOB },
     { COL_ATTESTATION_KEY,  COL_TYPE_BLOB },
     { COL_AUTH_KEY,         COL_TYPE_BLOB },
@@ -110,6 +111,9 @@ Device::Device(nlohmann::basic_json<> value, Config &config) :
         }
         else if (!key.compare(COL_PROVER_EP)) {
             toEndpoint(proverEndpoint, el.value());
+        }
+        else if (!key.compare(COL_REVOCATION_EP)) {
+            toEndpoint(revocationEndpoint, el.value());
         }
         else if (!key.compare(COL_ENCRYPTION_KEY)) {
             string src = el.value().get<string>();
@@ -234,6 +238,10 @@ int populateDevice(Device *device, sqlite3_stmt *statement)
             else if (!strcmp(name, COL_PROVER_EP)) {
                 Endpoint ep(value);
                 device->setProverEndpoint(ep);
+            }
+            else if (!strcmp(name, COL_REVOCATION_EP)) {
+                Endpoint ep(value);
+                device->setRevocationEndpoint(ep);
             }
             else if (!strcmp(name, COL_EVIDENCE_TYPES)) {
                 parseEvidenceTypes(value, device->getEvidenceTypes());
@@ -368,6 +376,7 @@ void Device::createDeviceTable()
       COL_VERIFIER_EP      " TEXT  NOT NULL, "
       COL_RELYINGPARTY_EP  " TEXT  NOT NULL, "
       COL_PROVER_EP        " TEXT  NOT NULL, "
+      COL_REVOCATION_EP    " TEXT  NOT NULL, "
       COL_ENCRYPTION_KEY   " BLOB, "
       COL_ATTESTATION_KEY  " BLOB, "
       COL_AUTH_KEY         " BLOB, "
@@ -411,7 +420,8 @@ string Device::toString()
            + "'" + osVersion + "', '"
            + verifierEndpoint.toStringOneline() + "', '"
            + relyingPartyEndpoint.toStringOneline() + "', '"
-           + proverEndpoint.toStringOneline() + "', "
+           + proverEndpoint.toStringOneline() + "', '"
+           + revocationEndpoint.toStringOneline() + "', "
            + "X'" + Log::toHex(encryptionKey) + "', "
            + "X'" + Log::toHex(attestationKey) + "', "
            + "X'" + Log::toHex(authKey) + "', "

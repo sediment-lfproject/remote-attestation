@@ -32,6 +32,7 @@ using namespace std;
 #define COL_VERIFIER_EP      "verifierEndpoint"
 #define COL_RELYINGPARTY_EP  "relyingPartyEndpoint"
 #define COL_PROVER_EP        "proverEndpoint"
+#define COL_REVOCATION_EP    "revocationEndpoint"
 #define COL_ENCRYPTION_KEY   "encryptionKey"
 #define COL_ATTESTATION_KEY  "attestationKey"
 #define COL_AUTH_KEY         "authKey"
@@ -65,6 +66,7 @@ private:
     Endpoint verifierEndpoint;
     Endpoint relyingPartyEndpoint;
     Endpoint proverEndpoint;
+    Endpoint revocationEndpoint;
 
     Vector attestationKey;
     Vector encryptionKey;
@@ -295,6 +297,16 @@ public:
     void setProverEndpoint(const Endpoint &proverEndpoint)
     {
         this->proverEndpoint.copy(proverEndpoint);
+    }
+
+    Endpoint& getRevocationEndpoint()
+    {
+        return revocationEndpoint;
+    }
+
+    void setRevocationEndpoint(const Endpoint &revocationEndpoint)
+    {
+        this->revocationEndpoint.copy(revocationEndpoint);
     }
 
     vector<uint8_t> &getEvidenceTypes()
