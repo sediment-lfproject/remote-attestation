@@ -1069,6 +1069,7 @@ class Revocation : public Message
 {
 protected:
     Vector payload;
+    Vector checksum;
 
 public:
     Revocation()
@@ -1084,18 +1085,27 @@ public:
     {
         return Message::getSize()
             + PAYLOAD_SIZE_LEN
-            + payload.size();
+            + payload.size()
+            + DATA_CHECKSUM_LEN
+            + checksum.size();
     }
 
     string toString()
     {
        return SD_TO_STRING(
             Message::toString()
-            + "\npayload: " + Log::toHex(payload));
+            + "\npayload: " + Log::toHex(payload)
+            + "\nchecksum: " + Log::toHex(checksum));
     }
 
     Vector &getPayload()
     {
         return payload;
     }
+
+    Vector &getChecksum()
+    {
+        return checksum;
+    }
+
 };

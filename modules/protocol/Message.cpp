@@ -398,6 +398,9 @@ void Revocation::decode(Vector &data)
 
     int payload_size = Codec::getInt(data, PAYLOAD_SIZE_LEN);
     Codec::getByteArray(data, payload_size, payload);
+
+    int checksum_size = Codec::getInt(data, DATA_CHECKSUM_LEN);
+    Codec::getByteArray(data, checksum_size, checksum);
 }
 
 void Revocation::encode(Vector &data)
@@ -406,4 +409,7 @@ void Revocation::encode(Vector &data)
 
     Codec::putInt(payload.size(), data, PAYLOAD_SIZE_LEN);
     Codec::putByteArray(data, payload);
+
+    Codec::putInt(checksum.size(), data, DATA_CHECKSUM_LEN);
+    Codec::putByteArray(data, checksum);
 }
