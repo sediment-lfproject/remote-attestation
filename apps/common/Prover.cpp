@@ -250,36 +250,37 @@ bool Prover::moveTo(MessageID id, Message *received)
         break;
     case KEY_CHANGE:
         to_send   = prepareKeyChange(received);
-#if defined(SEEC_ENABLED)
-        expecting = REVOCATION_CHECK; // if SEEC is enabled, check for Revocation(s) before preparing data
-#else
         expecting = DATA; // no response, just move to the next procedure
+#if defined(SEEC_ENABLED)
+        if (config.isSeecEnabled())
+            expecting = REVOCATION_CHECK; // if SEEC is enabled, check for Revocation(s) before preparing data
 #endif
         towait    = false;
         break;
     case REVOCATION_CHECK:
-#if defined(SEEC_ENABLED)
-        to_send   = prepareRevocationCheck(received);
-        expecting = REVOCATION_ACK;
-#else
         expecting = DATA;
         towait = false;
+#if defined(SEEC_ENABLED)
+        if (config.isSeecEnabled()) {
+            to_send   = prepareRevocationCheck(received);
+            expecting = REVOCATION_ACK;
+            towait = true;
+        }
 #endif
-        break;
-    case REVOCATION_ACK:
-        SD_LOG(LOG_DEBUG, "REVOCATION_ACK NOT implemented yet!");
-        expecting = DATA;  // no response, just move to the next procedure
-        towait = false;
         break;
     case DATA:
         to_send = prepareData(received);
+        if (config.getTransport() == TRANSPORT_SEDIMENT_MQTT) {
+            towait = false;
+            cause = CAUSE_PERIODIC;
 #if defined(SEEC_ENABLED)
-        expecting = REVOCATION_CHECK; // if SEEC is enabled, check for Revocation(s) before preparing data next time
-#else
-        expecting = RESULT;
+            if (config.isSeecEnabled())
+                expecting = REVOCATION_CHECK; // if SEEC is enabled, check for Revocation(s) before preparing data
 #endif
-        towait = false;
-        cause = CAUSE_PERIODIC;
+        }
+        else {
+            expecting = RESULT;
+        }
         break;
     default:
         if (received != NULL)
@@ -718,6 +719,7 @@ bool Prover::handleRevocationAck(Message *received)
 
     seec.revocationAck(data->getIv(), data->getPayload(), board, measList);
 
+    cause = CAUSE_PERIODIC;
     expecting = DATA;
     return true;
 
@@ -827,6 +829,10 @@ bool Prover::handleResult(Message *received)
     }
 
     expecting = DATA;
+#if defined(SEEC_ENABLED)
+    if (config.isSeecEnabled())
+        expecting = REVOCATION_CHECK; // if SEEC is enabled, check for Revocation(s) before preparing data
+#endif
 
     Result *result = (Result *) received;
     Acceptance acceptance = result->getAcceptance();
@@ -846,7 +852,7 @@ bool Prover::handleResult(Message *received)
     }
     else if (acceptance == ACCEPT) {
         rejectCount = 0;
-        transit(DATA, CAUSE_PERIODIC);
+        transit(expecting, CAUSE_PERIODIC);
     }
     return true;
 }
@@ -1105,7 +1111,12 @@ static bool isRevocation(MessageID id)
 void Prover::conditional_transit(Cause attest, Cause no_attest)
 {
     if (!config.isAttestationEnabled()) {
-        transit(DATA, no_attest);
+        if(config.isSeecEnabled()) {
+            transit(REVOCATION_CHECK, no_attest);
+        }
+        else {
+            transit(DATA, no_attest);
+        }
     }
     else {
         transit(PASSPORT_REQUEST, attest);
