@@ -657,6 +657,9 @@ Message *Prover::prepareRevocationCheck(Message *received)
     Data *data = new Data();
     data->setId(REVOCATION_CHECK);
 
+    revCheckSqn++;
+    board->saveRevCheckSqn(revCheckSqn);
+
     Crypto *crypto = seec.getCrypto();
     if (crypto == NULL) {
         SD_LOG(LOG_ERR, "null crypto");
@@ -719,7 +722,10 @@ bool Prover::handleRevocationAck(Message *received)
 
     MeasurementList &measList = data->getMeasurementList();
 
-    seec.revocationAck(data->getIv(), data->getPayload(), board, measList);
+    uint32_t revAckSqn = board->getRevAckSqn();
+    // revAckSqn is updated by revocationAck
+    seec.revocationAck(data->getIv(), data->getPayload(), board, measList,revAckSqn);
+    board->saveRevAckSqn(revAckSqn);
 
     cause = CAUSE_PERIODIC;
     expecting = DATA;

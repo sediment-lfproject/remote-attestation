@@ -71,7 +71,7 @@ public:
     void revocation(Vector &payload);
     void revocationCheck(Vector &iv, Vector &payload, int message_size, MeasurementList &measList,
                      Board *board, string &deviceID, Crypto *crypto, char *plaintext);
-    void revocationAck(Vector &iv, Vector &payload, Board *board, MeasurementList &measList);
+    void revocationAck(Vector &iv, Vector &payload, Board *board, MeasurementList &measList, uint32_t &revAckSqn);
 #endif
 
     Crypto * getCrypto()
