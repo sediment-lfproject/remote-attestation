@@ -24,7 +24,7 @@ extern "C" {
 #define NV_RSA_OFFSET   0x001fe000 // page 510: public and private keys
 #define NV_RSA2_OFFSET  0x001fd000 // page 509: sign and verify keys
 #define NV_RA_OFFSET    0x001fc000 // page 508: attestation SQN
-#define NV_SEEC_OFFSET  0x001fb000 // page 507: seec SQN
+#define NV_SEEC_OFFSET  0x001fb000 // page 507: seec SQN, rev check SQN, rev ack SQN
 #define NV_PAGE_SIZE    4096
 #define NV_BLOCK_SIZE   4
 #define NV_SPLIT_PAGES  1 // if RSA and WKD are in difference pages

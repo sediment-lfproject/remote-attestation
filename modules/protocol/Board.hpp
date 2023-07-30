@@ -108,6 +108,26 @@ public:
         return 0;
     }
 
+    virtual void saveRevCheckSqn(uint32_t sqn)
+    {
+        (void) sqn;
+    }
+
+    virtual uint32_t getRevCheckSqn()
+    {
+        return 0;
+    }
+
+    virtual void saveRevAckSqn(uint32_t sqn)
+    {
+        (void) sqn;
+    }
+
+    virtual uint32_t getRevAckSqn()
+    {
+        return 0;
+    }
+
     const string& getId() const
     {
         return id;

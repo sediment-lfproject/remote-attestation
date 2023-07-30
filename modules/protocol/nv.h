@@ -284,6 +284,14 @@ extern "C" {
 #define NV_LEN_SEEC_SQN           4
 #define NV_OFFSET_SEEC_SQN        (NV_SEEC_OFFSET)
 
+#define NV_REV_CHECK_SQN          "rev_check_sqn"
+#define NV_LEN_REV_CHECK_SQN      4
+#define NV_OFFSET_REV_CHECK_SQN   (NV_OFFSET_SEEC_SQN + NV_LEN_SEEC_SQN)
+
+#define NV_REV_ACK_SQN            "rev_ack_sqn"
+#define NV_LEN_REV_ACK_SQN        4
+#define NV_OFFSET_REV_ACK_SQN     (NV_OFFSET_REV_CHECK_SQN + NV_LEN_REV_CHECK_SQN)
+
 typedef struct _item {
     char     name[32];
     uint32_t offset;

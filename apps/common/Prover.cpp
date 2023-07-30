@@ -37,6 +37,8 @@ void Prover::run()
 {
     attestSqn = board->getAttestSqn();
     seecSqn = board->getSeecSqn();
+    revCheckSqn = board->getRevCheckSqn();
+    revAckSqn = board->getRevAckSqn();
 
     if (config.getTransport() == TRANSPORT_SEDIMENT_MQTT) {
         string url = config.getMqttUrl();

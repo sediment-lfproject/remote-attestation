@@ -140,6 +140,58 @@ uint32_t BoardZephyr::getSeecSqn()
     return 0;
 }
 
+void BoardZephyr::saveRevCheckSqn(uint32_t sqn)
+{
+    SD_LOG(LOG_INFO, "saveRevCheckSqn() %d", sqn);
+
+    int ret = do_erase(NV_OFFSET_REV_CHECK_SQN, NV_PAGE_SIZE);
+    if (ret) {
+        SD_LOG(LOG_ERR, "erase REV CHECK SQN page failed");
+        return;
+    }
+
+    uint8_t *buf = (uint8_t *) &sqn;
+    write_item((char *) NV_REV_CHECK_SQN, NV_LEN_REV_CHECK_SQN, buf);
+}
+
+uint32_t BoardZephyr::getRevCheckSqn()
+{
+    uint8_t buf[16];
+
+    if (reload(NV_REV_CHECK_SQN, sizeof(buf), buf) == 0) {
+        return *(uint32_t *) buf;
+    }
+
+    SD_LOG(LOG_ERR, "getRevCheckSqn() failed");
+    return 0;
+}
+
+void BoardZephyr::saveRevAckSqn(uint32_t sqn)
+{
+    SD_LOG(LOG_INFO, "saveRevAckSqn() %d", sqn);
+
+    int ret = do_erase(NV_OFFSET_REV_ACK_SQN, NV_PAGE_SIZE);
+    if (ret) {
+        SD_LOG(LOG_ERR, "erase REV ACK SQN page failed");
+        return;
+    }
+
+    uint8_t *buf = (uint8_t *) &sqn;
+    write_item((char *) NV_REV_ACK_SQN, NV_LEN_REV_ACK_SQN, buf);
+}
+
+uint32_t BoardZephyr::getRevAckSqn()
+{
+    uint8_t buf[16];
+
+    if (reload(NV_REV_ACK_SQN, sizeof(buf), buf) == 0) {
+        return *(uint32_t *) buf;
+    }
+
+    SD_LOG(LOG_ERR, "getRevAckSqn() failed");
+    return 0;
+}
+
 uint32_t BoardZephyr::getReportInterval()
 {
     uint8_t buf[16];

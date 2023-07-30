@@ -29,6 +29,10 @@ public:
     virtual uint32_t getAttestSqn();
     virtual void saveSeecSqn(uint32_t sqn);
     virtual uint32_t getSeecSqn();
+    virtual void saveRevCheckSqn(uint32_t sqn);
+    virtual uint32_t getRevCheckSqn();
+    virtual void saveRevAckSqn(uint32_t sqn);
+    virtual uint32_t getRevAckSqn();
     virtual uint32_t getReportInterval();    
     virtual char* getConfigBlocks(int *len) ;
 };

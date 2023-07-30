@@ -314,6 +314,32 @@ uint32_t BoardRPI::getSeecSqn()
     return loadSqn(filename);
 }
 
+void BoardRPI::saveRevCheckSqn(uint32_t sqn)
+{
+    saveInt((char *)"sqn", (char *)"rev-check", id, sqn);
+}
+
+uint32_t BoardRPI::getRevCheckSqn()
+{
+    char filename[128];
+
+    intFile((char *)"sqn", (char *)"rev-check", id, filename);
+    return loadSqn(filename);
+}
+
+void BoardRPI::saveRevAckSqn(uint32_t sqn)
+{
+    saveInt((char *)"sqn", (char *)"rev-ack", id, sqn);
+}
+
+uint32_t BoardRPI::getRevAckSqn()
+{
+    char filename[128];
+
+    intFile((char *)"sqn", (char *)"rev-ack", id, filename);
+    return loadSqn(filename);
+}
+
 uint32_t BoardRPI::getReportInterval()
 {
     char filename[128];

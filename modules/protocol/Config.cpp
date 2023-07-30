@@ -142,6 +142,8 @@ bool Config::parseTopLevel(bool isProver, string &key, string &value)
     }
     else if (!key.compare(NV_ATTEST_SQN)) { }
     else if (!key.compare(NV_SEEC_SQN)) { }
+    else if (!key.compare(NV_REV_CHECK_SQN)) { }
+    else if (!key.compare(NV_REV_ACK_SQN)) { }
     else if (!key.compare(NV_AUTH_KEY)) {
         Utils::readHex(auth_key, value, value.size() / 2);
     }

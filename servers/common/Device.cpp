@@ -40,7 +40,9 @@ Col cols[] = {
     { COL_LAST_ATTESTATION, COL_TYPE_INT  },
     { COL_STATUS,           COL_TYPE_INT  },
     { COL_SQN,              COL_TYPE_INT  },
-    { COL_SEEC_SQN,         COL_TYPE_INT  },    
+    { COL_SEEC_SQN,         COL_TYPE_INT  },
+    { COL_REV_CHECK_SQN,    COL_TYPE_INT  },
+    { COL_REV_ACK_SQN,      COL_TYPE_INT  },
     { COL_EVIDENCE_TYPES,   COL_TYPE_TEXT },
 };
 
@@ -158,7 +160,13 @@ Device::Device(nlohmann::basic_json<> value, Config &config) :
         }
         else if (!key.compare(COL_SEEC_SQN)) {
             seecSqn = el.value().get<int>();
-        }        
+        }
+        else if (!key.compare(COL_REV_CHECK_SQN)) {
+            revCheckSqn = el.value().get<int>();
+        }
+        else if (!key.compare(COL_REV_ACK_SQN)) {
+            revAckSqn = el.value().get<int>();
+        }
         else if (!key.compare(COL_EVIDENCE_TYPES)) {
             string src = el.value().get<string>();
             parseEvidenceTypes(src, evidenceTypes);
@@ -261,7 +269,11 @@ int populateDevice(Device *device, sqlite3_stmt *statement)
             else if (!strcmp(name, COL_SQN))
                 device->setSqn(value);
             else if (!strcmp(name, COL_SEEC_SQN))
-                device->setSeecSqn(value);                
+                device->setSeecSqn(value);
+            else if (!strcmp(name, COL_REV_CHECK_SQN))
+                device->setRevCheckSqn(value);
+            else if (!strcmp(name, COL_REV_ACK_SQN))
+                device->setRevAckSqn(value);
             else {
                 SD_LOG(LOG_ERR, "char column not recogized: %s", cols[i].name);
             }
@@ -385,7 +397,9 @@ void Device::createDeviceTable()
       COL_LAST_ATTESTATION " INT, "
       COL_STATUS           " INT, "
       COL_SQN              " INT, "
-      COL_SEEC_SQN         " INT, "      
+      COL_SEEC_SQN         " INT, "
+      COL_REV_CHECK_SQN    " INT, "
+      COL_REV_ACK_SQN      " INT, "
       COL_EVIDENCE_TYPES   " TEXT);";
 
     char *msg;
@@ -430,7 +444,9 @@ string Device::toString()
            + to_string(lastAttestation) + ", "
            + to_string(status) + ", "
            + to_string(sqn) + ", "
-           + to_string(seecSqn) + ", "           
+           + to_string(seecSqn) + ", "
+           + to_string(revCheckSqn) + ", "
+           + to_string(revAckSqn) + ", "
            + "'" + convertEvidenceTypes() + "'";
 }
 
