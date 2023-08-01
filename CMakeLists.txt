@@ -32,6 +32,7 @@ link_libraries(
   mbedtls
   mbedcrypto
   mbedx509  
+  mysqlcppconn
   paho-mqttpp3
   paho-mqtt3as
 )
@@ -120,7 +121,6 @@ endif()
 if(DEFINED UBUNTU_AFTER_2017)
   compile_options(${PROVER} PUBLIC ${UBUNTU_AFTER_2017})
 endif()
-
 add_subdirectory(apps/rpi/udf)
 add_subdirectory(modules/protocol)
 add_subdirectory(servers/common)
