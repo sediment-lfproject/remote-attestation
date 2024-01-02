@@ -1,7 +1,8 @@
 ﻿/*
- * Copyright (c) 2023 Peraton Labs
+ * Copyright (c) 2023-2024 Peraton Labs
  * SPDX-License-Identifier: Apache-2.0
- * @author tchen
+ * 
+ * Distribution Statement “A” (Approved for Public Release, Distribution Unlimited).
  */
 
 #include <iostream>
@@ -58,12 +59,18 @@ void Server::run()
         string clientAddr(str);
         EndpointSock *epSock = new EndpointSock(endpoint.getProtocol(), clientAddr, client.sin_port, sock);
 
-        std::thread conn(&Server::runProcedure, this, epSock);
-        conn.detach();
+        std::unique_ptr<DeviceManager> deviceManager = std::make_unique<DeviceManager>(dbType, dbName);
+        if (deviceManager->isConnected()) {
+            std::thread conn(&Server::runProcedure, this, epSock, std::move(deviceManager));
+            conn.detach();
+        }
+        else {
+            close(sock);
+        }
     }
 }
 
-void Server::runProcedure(EndpointSock *epSock)
+void Server::runProcedure(EndpointSock *epSock, std::unique_ptr<DeviceManager> deviceManager)
 {
     int peer_sock = epSock->getSock();
 
@@ -111,17 +118,17 @@ void Server::runProcedure(EndpointSock *epSock)
         }
         SD_LOG(LOG_DEBUG, "received.....%s", message->toString().c_str());
 
-        Device *device = authenticate(message, buf, expected);
+        Device *device = authenticate(*deviceManager, message, buf, expected);
         if (device == NULL) {
             delete message;
             break;
         }
 
-        Message *response = handleMessage(message, epSock, device, buf, expected);
+        Message *response = handleMessage(*deviceManager, message, epSock, device, buf, expected);
         delete message; // message handled, no longer needed
 
         if (response != NULL) {
-            finalizeAndSend(peer_sock, response);
+            finalizeAndSend(*deviceManager, peer_sock, response);
             delete response; // response sent, no longer needed
         }
         else
@@ -159,12 +166,34 @@ void Server::setTimestamp(Message *message)
     message->setTimestamp(getTimestamp());
 }
 
-void Server::calAuthToken(Message *message, uint8_t *serialized, uint32_t len)
+void Server::finalizeAndSend(DeviceManager &deviceManager, int peer_sock, Message *message)
+{
+    setTimestamp(message);
+    AuthToken &authToken = message->getAuthToken();
+
+    uint32_t msg_len;
+    uint8_t *serialized = message->serialize(&msg_len);
+
+    calAuthToken(deviceManager, message, serialized, msg_len);
+
+    uint32_t size = authToken.getSize();
+    Vector data(size);
+    authToken.encode(data);
+
+    memcpy(serialized + AUTH_TOKEN_OFFSET, (char *) data.at(0), authToken.getSize());
+
+    sendMessage(peer_sock, message->getId(), serialized, msg_len);
+    free(serialized);
+
+    SD_LOG(LOG_DEBUG, "sent (%d).........%s", msg_len, message->toString().c_str());
+}
+
+void Server::calAuthToken(DeviceManager &deviceManager, Message *message, uint8_t *serialized, uint32_t len)
 {
     // TODO
     (void) serialized;
     (void) len;
-    Seec *seec = findSeec(message->getDeviceID());
+    Seec *seec = findSeec(deviceManager, message->getDeviceID());
     if (seec == NULL) {
         SD_LOG(LOG_ERR, "null seec, auth digest not calculated");
         return;
@@ -180,12 +209,12 @@ void Server::calAuthToken(Message *message, uint8_t *serialized, uint32_t len)
     crypto->calDigest(authToken, serialized, len, message->getPayloadOffset());
 }
 
-Device * Server::authenticate(Message *message, uint8_t *serialized, uint32_t len)
+Device * Server::authenticate(DeviceManager &deviceManager, Message *message, uint8_t *serialized, uint32_t len)
 {
     (void) serialized;
     (void) len;
     string &deviceID = message->getDeviceID();
-    Device *device   = Device::findDevice(deviceID);
+    Device *device   = deviceManager.findDevice(deviceID);
     if (device == NULL) {
         SD_LOG(LOG_ERR, "unknown device %s", deviceID.c_str());
         return NULL;
@@ -213,9 +242,9 @@ Device * Server::authenticate(Message *message, uint8_t *serialized, uint32_t le
     return crypto->authenticate(message->getAuthToken(), serialized, len, message->getPayloadOffset()) ? device : NULL;
 }
 
-Seec * Server::findSeec(string deviceID)
+Seec * Server::findSeec(DeviceManager &deviceManager, string deviceID)
 {
-    Device *device = Device::findDevice(deviceID);
+    Device *device = deviceManager.findDevice(deviceID);
 
     if (device == NULL) {
         SD_LOG(LOG_ERR, "unknown device %s", deviceID.c_str());

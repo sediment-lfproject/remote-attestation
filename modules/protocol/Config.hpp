@@ -1,7 +1,8 @@
 ﻿/*
- * Copyright (c) 2023 Peraton Labs
+ * Copyright (c) 2023-2024 Peraton Labs
  * SPDX-License-Identifier: Apache-2.0
- * @author tchen
+ * 
+ * Distribution Statement “A” (Approved for Public Release, Distribution Unlimited).
  */
 
 #pragma once
@@ -34,12 +35,13 @@ protected:
     uint32_t passport_period = 10 * 24 * 60 * 60; // in seconds
     bool pass_thru_enabled   = false;             // for easier testing and debugging
 
-    uint32_t payload_size = 32; // sensor data payload, (minimum is
+    uint32_t payload_size = 96; // sensor data payload, (minimum is
 
     string component;
     ConfigComponent configComponent;
 
     bool download = false; // whether to download config to the device
+    int32_t fixed_delay    = -1;    
 
     int num_cycles = 5;  // number of cycles in the WKD-IBE case
     int iterations = 10; // number of iterations in each cycle
@@ -56,6 +58,7 @@ protected:
     string mqttUrl = "127.0.0.1";
     string topicPub;
     string topicSub;
+    string topicRev;
 
 public:
     Config()
@@ -68,29 +71,26 @@ public:
 
     vector<string> parse_cmdline(int argc, char *argv[]);
     void print_usage(char *cmd);
+    Endpoint *parseEndpoint(string &value, bool *incoming);
     bool parseTopLevel(bool isProver, string &key, string &value);
     void parseFile(const string &filename);
     void update(string &lines);
 
-    static KeyEncType toKeyEncType(string method);
     static DataTransport toDataTransport(string transport);
 
     string toString()
     {
         // this is used to download a config string to the prover, if configured.
-        return SD_TO_STRING(
-            // NV_KEY_DIST        " " + TO_KEY_ENC_TYPE(key_dist) + "\n"  // obsolete
+        return
             NV_REPORT_INTVL    " " + to_string(report_interval) + "\n"
-            // + NV_KEY_CHG_INTVL   " " + to_string(key_change_interval) + "\n"  // obsolete
             + NV_ENCRYPT         " " + (enc_enabled ? "true" : "false") + "\n"
             + NV_AUTHENTICATION  " " + (auth_enabled ? "true" : "false") + "\n"
             + NV_ATTEST          " " + (attest_enabled ? "true" : "false") + "\n"
             + NV_SEEC            " " + (seec_enabled ? "true" : "false") + "\n"
-            // + NV_KEY_ENCRYPTION  " " + (key_enc_enabled ? "true" : "false") + "\n"  // obsolete
             + NV_SIGNING         " " + (sign_enabled ? "true" : "false") + "\n"
-            // + NV_KEY_CHANGE      " " + (key_change_enabled ? "true" : "false") + "\n"  // obsolete
             + NV_PASSPORT_PERIOD " " + to_string(passport_period) + "\n"
             + NV_PAYLOAD_SIZE    " " + to_string(payload_size) + "\n"
+            + NV_FIXED_DELAY     " " + to_string(fixed_delay) + "\n"
             + NV_PASS_THRU       " " + (pass_thru_enabled ? "true" : "false") + "\n"
             + NV_NUM_CYCLES      " " + to_string(num_cycles) + "\n"
             + NV_ITERATIONS      " " + to_string(iterations) + "\n"
@@ -100,7 +100,7 @@ public:
             // + NV_MQTT_SUB_TOPIC  " " + topicSub + "\n"  // do not change topics because pub/sub roles are different
             // + NV_MQTT_PUB_TOPIC  " " + topicPub + ""
             // "Component: " + configComponent.toString());
-        );
+            ;
     }
 
     int getLogLevel() const
@@ -341,5 +341,25 @@ public:
     void setTopicSub(string &topicSub)
     {
         this->topicSub = topicSub;
-    }   
+    }
+
+    void setTopicRev(string &topicRev)
+    {
+        this->topicRev = topicRev;
+    }
+
+    const string& getTopicRev()
+    {
+        return topicRev;
+    }
+
+    int getFixedDelay() const
+    {
+        return fixed_delay;
+    }
+
+    void setFixedDelay(int fixed_delay = -1)
+    {
+        this->fixed_delay = fixed_delay;
+    }    
 };

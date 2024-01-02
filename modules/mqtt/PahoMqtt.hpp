@@ -1,7 +1,8 @@
 /*
- * Copyright (c) 2023 Peraton Labs
+ * Copyright (c) 2023-2024 Peraton Labs
  * SPDX-License-Identifier: Apache-2.0
- * @author tchen
+ * 
+ * Distribution Statement “A” (Approved for Public Release, Distribution Unlimited).
  */
 
 #pragma once
@@ -101,7 +102,12 @@ class callback : public virtual mqtt::callback
 
         if (!mqtt->getTopicSub().empty()) {
             cli_.subscribe(mqtt->getTopicSub(), QOS, nullptr, subListener_);
-            SD_LOG(LOG_INFO, "subscrib to %s with QOS %d", mqtt->getTopicSub().c_str(), QOS);
+            SD_LOG(LOG_INFO, "subscribes to %s with QOS %d", mqtt->getTopicSub().c_str(), QOS);
+        }
+
+        if (!mqtt->getTopicRev().empty()) {
+            cli_.subscribe(mqtt->getTopicRev(), QOS, nullptr, subListener_);
+            SD_LOG(LOG_INFO, "subscribes to %s with QOS %d", mqtt->getTopicRev().c_str(), QOS);
         }
     }
 

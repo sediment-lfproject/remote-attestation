@@ -1,62 +1,29 @@
 ﻿/*
- * Copyright (c) 2023 Peraton Labs
+ * Copyright (c) 2023-2024 Peraton Labs
  * SPDX-License-Identifier: Apache-2.0
- * @author tchen
+ * 
+ * Distribution Statement “A” (Approved for Public Release, Distribution Unlimited).
  */
 
 #pragma once
 
-#include <fstream>
-#include <sqlite3.h>
+#include <string>
 
+#include "Endpoint.hpp"
+#include "Vector.hpp"
 #include "Seec.hpp"
-#include "Crypto.hpp"
 #include "Config.hpp"
 #include "Log.hpp"
-
 #include "nlohmann/json.hpp"
 
 using json = nlohmann::json;
 using namespace std;
 
-#define COL_TYPE_CHAR        0
-#define COL_TYPE_TEXT        1
-#define COL_TYPE_INT         2
-#define COL_TYPE_BLOB        3
-
-#define COL_ID               "id"
-#define COL_FIRMWARE         "firmware"
-#define COL_FIRMWARE_SIZE    "firmwareSize"
-#define COL_CONFIGS          "configs"
-#define COL_OS_VERSION       "osVersion"
-#define COL_VERIFIER_EP      "verifierEndpoint"
-#define COL_RELYINGPARTY_EP  "relyingPartyEndpoint"
-#define COL_PROVER_EP        "proverEndpoint"
-#define COL_ENCRYPTION_KEY   "encryptionKey"
-#define COL_ATTESTATION_KEY  "attestationKey"
-#define COL_AUTH_KEY         "authKey"
-#define COL_NONCE            "nonce"
-#define COL_PASSPORT_EXPIRY  "passportExpiryDate"
-
-#define COL_LAST_ATTESTATION "lastAttestation"
-#define COL_STATUS           "status"
-#define COL_SQN              "sqn"
-#define COL_SEEC_SQN         "seec_sqn"
-#define COL_EVIDENCE_TYPES   "evidenceTypes"
-
 typedef uint32_t TimeStamp;
-
-typedef struct _col {
-    const char *name;
-    char        type;
-} Col;
 
 class Device
 {
 private:
-    static map<string, Device *> devices;
-    static sqlite3 *deviceDB;
-
     string id;
     string firmware;
     string osVersion;
@@ -65,6 +32,7 @@ private:
     Endpoint verifierEndpoint;
     Endpoint relyingPartyEndpoint;
     Endpoint proverEndpoint;
+    Endpoint revocationEndpoint;
 
     Vector attestationKey;
     Vector encryptionKey;
@@ -77,7 +45,9 @@ private:
     TimeStamp lastAttestation;
     bool status = false;
     uint32_t sqn;
-    uint32_t seecSqn;    
+    uint32_t seecSqn;
+    uint32_t revCheckSqn;
+    uint32_t revAckSqn;
     vector<uint8_t> evidenceTypes;
 
 public:
@@ -87,23 +57,10 @@ public:
         seec(config)
     { }
 
-    static Device * findDevice(string &serial);
-    static Device * findDeviceByIP(string &ip);
+    static void parseEvidenceTypes(string &s, vector<uint8_t> &types);
 
-    static int callback(void *data, int argc, char **argv, char **azColName);
-    static void deleteDevice(Device *device);
-    static int insertEndpoint(Endpoint *endpoint);
-    static int insertDevice(Device *device);
-    static int insertDevice(string device);
-    static int selectEndpoint(int endpointId);
-    static Device * selectDevice(string col, string &value);
-    static void createEndpointTable();
-    static void createDeviceTable();
-    static void open(const string &dbName);
     string convertEvidenceTypes();
 
-    void update(string col, string value);
-    string getCol(string col);
 
     string toString();
 
@@ -228,6 +185,7 @@ public:
     {
         this->configs = configs;
     }
+
     void setOsVersion(string osVersion)
     {
         this->osVersion = osVersion;
@@ -287,6 +245,26 @@ public:
         this->seecSqn = sqn;
     }
 
+    uint32_t getRevCheckSqn() const
+    {
+        return revCheckSqn;
+    }
+
+    void setRevCheckSqn(uint32_t sqn)
+    {
+        this->revCheckSqn = sqn;
+    }
+
+    uint32_t getRevAckSqn() const
+    {
+        return revAckSqn;
+    }
+
+    void setRevAckSqn(uint32_t sqn)
+    {
+        this->revAckSqn = sqn;
+    }
+
     Endpoint& getProverEndpoint()
     {
         return proverEndpoint;
@@ -295,6 +273,16 @@ public:
     void setProverEndpoint(const Endpoint &proverEndpoint)
     {
         this->proverEndpoint.copy(proverEndpoint);
+    }
+
+    Endpoint& getRevocationEndpoint()
+    {
+        return revocationEndpoint;
+    }
+
+    void setRevocationEndpoint(const Endpoint &revocationEndpoint)
+    {
+        this->revocationEndpoint.copy(revocationEndpoint);
     }
 
     vector<uint8_t> &getEvidenceTypes()

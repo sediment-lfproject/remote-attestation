@@ -1,5 +1,6 @@
 /*
- * Copyright (c) 2023 Peraton Labs
+ * Copyright (c) 2023-2024 Peraton Labs
  * SPDX-License-Identifier: Apache-2.0
- */
-#include <net/socket.h>
+ *
+ * Distribution Statement “A” (Approved for Public Release, Distribution Unlimited).
+ */#include <net/socket.h>

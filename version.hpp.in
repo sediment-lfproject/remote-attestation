@@ -1,0 +1,10 @@
+#pragma once
+
+#include <string>
+
+const std::string PROGRAM_VERSION = "@PROGRAM_VERSION@";
+const std::string GIT_HASH = "@GIT_HASH@";
+const std::string GIT_HASH_RA = "@GIT_HASH_RA@";
+
+const std::string GIT_BRANCH = "@GIT_BRANCH@";
+const std::string GIT_BRANCH_RA = "@GIT_BRANCH_RA@";

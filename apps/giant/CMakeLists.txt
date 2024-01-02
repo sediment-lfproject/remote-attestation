@@ -1,5 +1,6 @@
-# Copyright (c) 2023 Peraton Labs
+# Copyright (c) 2023-2024 Peraton Labs
 # SPDX-License-Identifier: Apache-2.0
+# Distribution Statement “A” (Approved for Public Release, Distribution Unlimited).
 
 cmake_minimum_required(VERSION 3.13.1)
 
@@ -32,7 +33,7 @@ FILE(GLOB source
   *.cpp
   ${DEV_COMMON}/*.cpp
   ${PROTOCOL}/*.cpp
-  ${MQTT_ZEPHYR}/*.cpp
+  ${MQTT_ZEPHYR}/Mqtt.cpp
   ${AUTH}/Verify.cpp
   ${AUTH}/Sign.cpp
   ${SEEC}/*.cpp

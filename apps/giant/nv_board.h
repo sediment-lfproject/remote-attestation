@@ -1,7 +1,8 @@
 /*
- * Copyright (c) 2023 Peraton Labs
+ * Copyright (c) 2023-2024 Peraton Labs
  * SPDX-License-Identifier: Apache-2.0
- * @author tchen
+ * 
+ * Distribution Statement “A” (Approved for Public Release, Distribution Unlimited).
  */
 
 /*
@@ -20,14 +21,12 @@
 extern "C" {
 #endif
 
-#define NV_FLASH_OFFSET 0x001ff000 // page 511
-#define NV_RSA_OFFSET   0x001fe000 // page 510: public and private keys
-#define NV_RSA2_OFFSET  0x001fd000 // page 509: sign and verify keys
-#define NV_RA_OFFSET    0x001fc000 // page 508: attestation SQN
-#define NV_SEEC_OFFSET  0x001fb000 // page 507: seec SQN
-#define NV_PAGE_SIZE    4096
-#define NV_BLOCK_SIZE   4
-#define NV_SPLIT_PAGES  1 // if RSA and WKD are in difference pages
+#define NV_SEDIMENT_PAGE   0x001ff000 // page 511
+#define NV_SQN_PAGE        0x001fe000 // page 508
+#define NV_SEEC_PAGE_1     0x001fd000 // page 507
+#define NV_SEEC_PAGE_2     0x001fc000 // page 506
+#define NV_PAGE_SIZE       4096
+#define NV_BLOCK_SIZE      4
 
 #define CODE_START_ADDR 0x00000000
 

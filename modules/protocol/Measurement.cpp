@@ -1,7 +1,8 @@
 /*
- * Copyright (c) 2023 Peraton Labs
+ * Copyright (c) 2023-2024 Peraton Labs
  * SPDX-License-Identifier: Apache-2.0
- * @author tchen
+ * 
+ * Distribution Statement “A” (Approved for Public Release, Distribution Unlimited).
  */
 
 #include "Measurement.hpp"
@@ -16,9 +17,9 @@ uint32_t Measurement::getSize()
 
 string Measurement::toString()
 {
-    return SD_TO_STRING(
-        "\nelapsedTime: " + TO_MEAS_TYPE(type) + " "
-        + to_string(elapsedTime) + " us, optional:" + to_string(optional));
+    return
+          "\nelapsedTime: " + TO_MEAS_TYPE(type) + " "
+        + to_string(elapsedTime) + " us, optional:" + to_string(optional);
 }
 
 void Measurement::decode(Vector &data)

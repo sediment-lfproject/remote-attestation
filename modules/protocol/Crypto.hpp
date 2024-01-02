@@ -1,7 +1,8 @@
 ﻿/*
- * Copyright (c) 2023 Peraton Labs
+ * Copyright (c) 2023-2024 Peraton Labs
  * SPDX-License-Identifier: Apache-2.0
- * @author tchen
+ * 
+ * Distribution Statement “A” (Approved for Public Release, Distribution Unlimited).
  */
 
 #pragma once
@@ -135,7 +136,6 @@ public:
         memcpy((char *) saved, (char *) &digest[0], digest.size());
 
         calDigest(authToken, serialized, len, offset);
-
         if (memcmp((char *) &digest[0], saved, digest.size()) == 0) {
             return true;
         }
@@ -177,5 +177,4 @@ public:
 
         return true;
     }
-
 };

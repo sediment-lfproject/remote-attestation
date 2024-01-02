@@ -1,7 +1,8 @@
 ﻿/*
- * Copyright (c) 2023 Peraton Labs
+ * Copyright (c) 2023-2024 Peraton Labs
  * SPDX-License-Identifier: Apache-2.0
- * @author tchen
+ * 
+ * Distribution Statement “A” (Approved for Public Release, Distribution Unlimited).
  */
 
 #pragma once
@@ -50,7 +51,6 @@
 #define PROVER_ID_LEN         1
 #define VERIFIER_ID_LEN       1
 
-#define PASSPORT_LEN          2
 #define SIGNATURE_LEN_LEN     2
 
 #define ADMITTANCE_LEN        1
@@ -100,11 +100,11 @@ public:
 
     virtual string toString()
     {
-        return SD_TO_STRING(
-            "id: " + idToString()
+        return
+              "id: " + idToString()
             + "\ntimestamp: " + to_string(timestamp)
             + "\ndeviceID: " + deviceID
-            + authToken.toString());
+            + authToken.toString();
     }
 
     string idToString();
@@ -181,9 +181,9 @@ public:
 
         cfg.resize(configs.size());
 
-        return SD_TO_STRING(
-            Message::toString()
-            + "\nconfigs:" + cfg);
+        return
+              Message::toString()
+            + "\nconfigs:" + cfg;
     }
 
     Vector& getConfigs()
@@ -228,9 +228,9 @@ public:
 
     string toString()
     {
-        return SD_TO_STRING(
-            Message::toString()
-            + "\nreason: " + TO_REASON(reason));
+        return
+              Message::toString()
+            + "\nreason: " + TO_REASON(reason);
     }
 
     Reason getReason() const
@@ -271,11 +271,11 @@ public:
 
     string toString()
     {
-        return SD_TO_STRING(
-            Message::toString()
+        return
+              Message::toString()
             + endpoint.toString()
             + attKeyBox.toString()
-            + measurementList.toString());
+            + measurementList.toString();
     }
 
     KeyBox& getAttKeyBox()
@@ -324,10 +324,10 @@ public:
 
     string toString()
     {
-        return SD_TO_STRING(
-            Message::toString()
+        return
+              Message::toString()
             + "\ncounter: " + to_string(counter)
-            + "\nport: " + to_string(port));
+            + "\nport: " + to_string(port);
     }
 
     int getPort() const
@@ -389,12 +389,12 @@ public:
 
     string toString()
     {
-        return SD_TO_STRING(Message::toString()
+        return Message::toString()
                  + "\ncounter:" + to_string(counter)
                  + "\nevidenceTypes: " + Log::toHex(evidenceTypes)
                  + "\nblockSize: " + to_string(blockSize)
                  + "\nblockCount: " + to_string(blockCount)
-                 + "\nchallenge nonce: " + Log::toHex(nonce));
+                 + "\nchallenge nonce: " + Log::toHex(nonce);
     }
 
     uint32_t getBlockCount() const
@@ -477,10 +477,10 @@ public:
 
     string toString()
     {
-        return SD_TO_STRING(
-            "\ntype: " + TO_EVIDENCETYPE(type)
+        return
+              "\ntype: " + TO_EVIDENCETYPE(type)
             + "\nencoding: " + TO_EVIDENCEENCODING(encoding)
-            + "\nevidence: " + Log::toHex(evidence));
+            + "\nevidence: " + Log::toHex(evidence);
     }
 
     EvidenceEncoding getEncoding() const
@@ -549,11 +549,11 @@ public:
             evidenceString += "\n[" + to_string(i) + "]:" + evidenceItems[i].toString();
         }
 #endif
-        return SD_TO_STRING(
-            Message::toString()
+        return
+              Message::toString()
             + "\ncounter:" + to_string(counter)
             + measurement.toString()
-            + evidenceString);
+            + evidenceString;
     }
 
     vector<EvidenceItem> &getEvidenceItems()
@@ -629,12 +629,12 @@ public:
 
     string toString()
     {
-        return SD_TO_STRING(
-            "\nproverID: " + proverID
+        return
+              "\nproverID: " + proverID
             + "\nverifierID: " + verifierID
             + "\nissueDate: " + to_string(issueDate)
             + "\nexpireDate: " + to_string(expireDate)
-            + "\nsignature: " + Log::toHex(signature));
+            + "\nsignature: " + Log::toHex(signature);
     }
 
     void copy(const Passport &src)
@@ -691,7 +691,6 @@ public:
 class Grant : public Message
 {
 protected:
-    uint16_t passportLen;
     Passport passport;
 
 public:
@@ -707,16 +706,14 @@ public:
     uint32_t getSize()
     {
         return Message::getSize()
-               + PASSPORT_LEN
                + passport.getSize();
     }
 
     string toString()
     {
-        return SD_TO_STRING(
-            Message::toString()
-            + "\npassportLen: " + to_string(passportLen)
-            + passport.toString());
+        return
+              Message::toString()
+            + passport.toString();
     }
 
     Passport &getPassport()
@@ -752,9 +749,9 @@ public:
 
     string toString()
     {
-        return SD_TO_STRING(
-            Message::toString()
-            + passport.toString());
+        return
+              Message::toString()
+            + passport.toString();
     }
 
     Passport &getPassport()
@@ -790,11 +787,11 @@ public:
 
     string toString()
     {
-        return SD_TO_STRING(
-            Message::toString()
+        return
+              Message::toString()
             + "\nadmittance " + TO_ADMITTANCE(admittance)
             + "\ncause: " + TO_CAUSE(cause)
-            + endpoint.toString());
+            + endpoint.toString();
     }
 
     Admittance getAdmittance() const
@@ -858,11 +855,11 @@ public:
 
     string toString()
     {
-        return SD_TO_STRING(
-            Message::toString()
+        return
+              Message::toString()
             + encKeyBox.toString()
             + signKeyBox.toString()
-            + measurementList.toString());
+            + measurementList.toString();
     }
 
     KeyBox& getEncKeyBox()
@@ -915,12 +912,12 @@ public:
 
     string toString()
     {
-        return SD_TO_STRING(
-            Message::toString()
+        return
+              Message::toString()
             + measurementList.toString()
             + "\niv: " + Log::toHex(iv)
             + "\npayload: " + Log::toHex(payload)
-            + "\nchecksum: " + Log::toHex(checksum));
+            + "\nchecksum: " + Log::toHex(checksum);
     }
 
     Vector &getPayload()
@@ -967,9 +964,9 @@ public:
 
     string toString()
     {
-        return SD_TO_STRING(
-            Message::toString()
-            + "\nacceptance: " + TO_ACCEPTANCE(acceptance));
+        return
+              Message::toString()
+            + "\nacceptance: " + TO_ACCEPTANCE(acceptance);
     }
 
     Acceptance getAcceptance() const
@@ -1016,12 +1013,12 @@ public:
 
     string toString()
     {
-        return SD_TO_STRING(
-            Message::toString()
+        return
+              Message::toString()
             + "\nverifierID: " + verifierID
             + "\nreason: " + TO_REASON(reason)
             + "\nsignature: " + Log::toHex(signature)
-            + endpoint.toString());
+            + endpoint.toString();
     }
 
     uint32_t getSigCoverage(Vector &signature, uint32_t *total)
@@ -1063,4 +1060,49 @@ public:
     {
         this->endpoint.copy(endpoint);
     }
+};
+
+class Revocation : public Message
+{
+protected:
+    Vector payload;
+    Vector checksum;
+
+public:
+    Revocation()
+        : Message(REVOCATION)
+    { }
+
+    virtual ~Revocation(){ }
+
+    void decode(Vector &data);
+    void encode(Vector &data);
+
+    uint32_t getSize()
+    {
+        return Message::getSize()
+            + PAYLOAD_SIZE_LEN
+            + payload.size()
+            + DATA_CHECKSUM_LEN
+            + checksum.size();
+    }
+
+    string toString()
+    {
+       return
+            Message::toString()
+            + "\npayload: " + Log::toHex(payload)
+            + "\nchecksum: " + Log::toHex(checksum);
+    }
+
+    Vector &getPayload()
+    {
+        return payload;
+    }
+
+    Vector &getChecksum()
+    {
+        return checksum;
+    }
+
 };

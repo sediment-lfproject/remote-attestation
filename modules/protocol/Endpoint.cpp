@@ -1,7 +1,8 @@
 ﻿/*
- * Copyright (c) 2023 Peraton Labs
+ * Copyright (c) 2023-2024 Peraton Labs
  * SPDX-License-Identifier: Apache-2.0
- * @author tchen
+ * 
+ * Distribution Statement “A” (Approved for Public Release, Distribution Unlimited).
  */
 
 #include "Endpoint.hpp"
@@ -21,10 +22,10 @@ string Endpoint::toString()
     if (protocol == MIN_PROTOCOL)
         return "-";
 
-    return SD_TO_STRING(
-        "\nprotocol: " + TO_PROTOCOL(protocol)
+    return 
+          "\nprotocol: " + TO_PROTOCOL(protocol)
         + "\naddress: " + address
-        + "\nport: " + to_string(port));
+        + "\nport: " + to_string(port);
 }
 
 string const Endpoint::toStringOneline() const
@@ -32,8 +33,11 @@ string const Endpoint::toStringOneline() const
     if (protocol == MIN_PROTOCOL)
         return "";
 
-    return SD_TO_STRING(
-        TO_PROTOCOL(protocol) + ":" + address + ":" + to_string(port));
+    string prot = TO_PROTOCOL(protocol);
+    std::transform(prot.begin(), prot.end(), prot.begin(), [](unsigned char c){
+        return std::tolower(c);
+    });
+    return prot + ":" + address + ":" + to_string(port);
 }
 
 void Endpoint::decode(Vector &data)

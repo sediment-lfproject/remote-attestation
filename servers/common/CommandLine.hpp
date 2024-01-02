@@ -1,156 +1,155 @@
 ﻿/*
- * Copyright (c) 2023 Peraton Labs
+ * Copyright (c) 2023-2024 Peraton Labs
  * SPDX-License-Identifier: Apache-2.0
- * @author tchen
+ * 
+ * Distribution Statement “A” (Approved for Public Release, Distribution Unlimited).
  */
 
 #pragma once
 
 #include <iostream>
+#include <vector>
+#include <getopt.h>
 
 #include "Config.hpp"
 #include "Board.hpp"
 
+#define BOOL(x) (x ? "true" : "false")
+
 using namespace std;
 
-#define SEDIMENT       "/opt/local/sediment/"
-#define DATA_DIR       "data/"
-#define CONFIGS_DIR    "configs/"
+#define SEDIMENT                "/opt/local/sediment/"
+#define DATA_DIR                "data/"
+#define CONFIGS_DIR             "configs/"
 
-#define DFT_PUBLISHER  CONFIGS_DIR "boards/Ubuntu-001" // data publisher related materials
-#define DFT_SUBSCRIBER CONFIGS_DIR "boards/+"          // data subscriber related materials
-#define DFT_RSA_PKEY   DATA_DIR "publicRSA.pem"        // RSA public key in PEM format
-#define DFT_RSA_PRKEY  DATA_DIR "privateRSA.pem"       // RSA private key in PEM format
-#define DFT_RSA_SKEY   DATA_DIR "sign_key.pem"         // RSA signing key in PEM format
-#define DFT_RSA_VKEY   DATA_DIR "verify_key.pem"       // RSA verification key in PEM format
-#define DFT_DATABASE   DATA_DIR "sediment.db"          // device sqlite database
+#define DFT_DATABASE            DATA_DIR "sediment.db"
+#define DFT_LOG_DIR             "logs"
+
+#define OPT_CONFIG              1000
+#define OPT_SEDIMENT            1001
+#define OPT_LOG_DIR             1002
+#define OPT_LOG_FILE            1003
+#define OPT_LOG_LEVEL           1004
+#define OPT_CONSOLE_LOG_LEVEL   1005
+#define OPT_LOG_MAX_SIZE        1006
+#define OPT_LOG_MAX_FILES       1007
+#define OPT_DATABASE            1008
+#define OPT_DATABASE_IMPL       1009
+#define OPT_VERSION             1010
 
 class CommandLine
 {
 protected:
     // These are overriden if the environment variable SEDIMENT is set.
     // Those set by SEDIMENT variable are in turn overriden by command line arguments.
-    string publisherConfig    = SEDIMENT DFT_PUBLISHER;
-    string subscriberConfig   = SEDIMENT DFT_SUBSCRIBER;
-    string rsaPublicKey       = SEDIMENT DFT_RSA_PKEY;
-    string rsaPrivateKey      = SEDIMENT DFT_RSA_PRKEY;
-    string rsaSigningKey      = SEDIMENT DFT_RSA_SKEY;
-    string rsaVerificationKey = SEDIMENT DFT_RSA_VKEY;
-    string database           = SEDIMENT DFT_DATABASE;
-    string sediment_home      = SEDIMENT;
-    bool sigVerifier          = true;
-    bool noGUI                = false;
+    string config;
+    string database             = SEDIMENT DFT_DATABASE;
+    string databaseType         = "sqlite";
+    string sediment_home        = SEDIMENT;
+    string logDir               = SEDIMENT DFT_LOG_DIR;
+    string logFile;
+    int logLevel                = LOG_DEBUG;
+    int consoleLogLevel         = LOG_DEBUG;
+    int logMaxSize              = 512;   // in MB
+    int logMaxFiles             = 3;
 
-    void updateHome(const char *env_p) 
-    {
+    int longopt = 0;
+    string opstring = "h";
+    vector<struct option> options = {
+        { "config",            required_argument, &longopt, OPT_CONFIG },
+        { "console-log-level", required_argument, &longopt, OPT_CONSOLE_LOG_LEVEL },
+        { "database",          required_argument, &longopt, OPT_DATABASE },
+        { "database-impl",     required_argument, &longopt, OPT_DATABASE_IMPL },
+        { "help",              no_argument,       0, 'h' },
+        { "log-dir",           required_argument, &longopt, OPT_LOG_DIR },
+        { "log-file",          required_argument, &longopt, OPT_LOG_FILE },
+        { "log-level",         required_argument, &longopt, OPT_LOG_LEVEL },
+        { "log-max-files",     required_argument, &longopt, OPT_LOG_MAX_FILES },
+        { "log-max-size",      required_argument, &longopt, OPT_LOG_MAX_SIZE },
+        { "sediment",          required_argument, &longopt, OPT_SEDIMENT },
+        { "version",           no_argument,       &longopt, OPT_VERSION },
+    };
+
+    void updateHome(const char *env_p) {
         string sediment(env_p);
         if (sediment.back() != '/')
             sediment += "/";
 
-        publisherConfig    = sediment + DFT_PUBLISHER;
-        subscriberConfig   = sediment + DFT_SUBSCRIBER;
-        rsaPublicKey       = sediment + DFT_RSA_PKEY;
-        rsaPrivateKey      = sediment + DFT_RSA_PRKEY;
-        rsaSigningKey      = sediment + DFT_RSA_SKEY;
-        rsaVerificationKey = sediment + DFT_RSA_VKEY;
-        database           = sediment + DFT_DATABASE;
-        sediment_home      = sediment;
+        database             = sediment + DFT_DATABASE;
+        logDir               = sediment + DFT_LOG_DIR;
+        sediment_home        = sediment;
     }
 
 public:
-    CommandLine()
-    {
-        if (const char *env_p = std::getenv("SEDIMENT")) 
-        {
+    CommandLine() {
+        if (const char *env_p = std::getenv("SEDIMENT")) {
             updateHome(env_p);
-            SD_LOG(LOG_INFO, "Environment variable SEDIMENT is %s", sediment_home.c_str());
-        }
-        else
-        {
-            SD_LOG(LOG_WARNING, "Environment variable SEDIMENT not set, default to %s", sediment_home.c_str());
         }
     }
 
-    void parseCmdline(int argc, char *argv[]);
+    string toString() {
+        const char *level_strings[] = {
+            "trace", "debug", "info", "warning", "error", "critical", "off"
+        };
+        return
+            "config: " + config + "\n" +
+            "console-log-level: " + level_strings[consoleLogLevel] + "\n" +
+            "database: " + database + "\n" +
+            "database-impl: " + databaseType + "\n" +
+            "log-dir: " + logDir + "\n" +
+            "log-file: " + logFile + "\n" +
+            "log-level: " + level_strings[logLevel] + "\n" +
+            "log-max-files: " + to_string(logMaxFiles) + "\n" +
+            "log-max-size: " + to_string(logMaxSize) + "\n" +
+            "sediment: " + sediment_home
+            ;
+    }
+
+    void init(char *app, string &def_config);
+    virtual void parseCmdline(int argc, char *argv[]) = 0;
     void printUsage(char *cmd);
-
-    const string& getPublisherConfig() const
-    {
-        return publisherConfig;
+    bool parseLongOption(int c);
+    
+    const string& getConfig() const {
+        return config;
     }
 
-    void setPublisherConfig(const string &publisherConfig)
-    {
-        this->publisherConfig = publisherConfig;
+    void setConfig(const string &config) {
+        this->config = config;
     }
 
-    const string& getSubscriberConfig() const
-    {
-        return subscriberConfig;
-    }
-
-    void setSubscriberConfig(const string &subscriberConfig)
-    {
-        this->subscriberConfig = subscriberConfig;
-    }
-
-    const string& getRsaPrivateKey() const
-    {
-        return rsaPrivateKey;
-    }
-
-    void setRsaPrivateKey(const string &rsaPrivateKey)
-    {
-        this->rsaPrivateKey = rsaPrivateKey;
-    }
-
-    const string& getRsaPublicKey() const
-    {
-        return rsaPublicKey;
-    }
-
-    void setRsaPublicKey(const string &rsaPublicKey)
-    {
-        this->rsaPublicKey = rsaPublicKey;
-    }
-
-    const string& getRsaSigningKey() const
-    {
-        return rsaSigningKey;
-    }
-
-    void setRsaSigningKey(const string &rsaSigningKey)
-    {
-        this->rsaSigningKey = rsaSigningKey;
-    }
-
-    const string& getRsaVerificationKey() const
-    {
-        return rsaVerificationKey;
-    }
-
-    void setRsaVerificationKey(const string &rsaVerificationKey)
-    {
-        this->rsaVerificationKey = rsaVerificationKey;
-    }
-
-    const string& getDatabase() const
-    {
+    const string& getDatabase() const {
         return database;
     }
 
-    const string& getSedimentHome() const
-    {
+    const string& getDatabaseType() const {
+        return databaseType;
+    }
+    const string& getSedimentHome() const {
         return sediment_home;
     }
 
-    bool isSigVerifier() const
-    {
-        return sigVerifier;
+    const string& getLogDir() const {
+        return logDir;
     }
 
-    bool isNoGUI() const
-    {
-        return noGUI;
+    const string& getLogFile() const {
+        return logFile;
+    }
+
+    int getLogLevel() const {
+        return logLevel;
+    }
+
+    int getConsoleLogLevel() const {
+        return consoleLogLevel;
+    }
+
+    int getLogMaxSize() const {
+        return logMaxSize;
+    }
+
+    int getLogMaxFiles() const {
+        return logMaxFiles;
     }
 };

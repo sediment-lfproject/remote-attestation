@@ -1,7 +1,8 @@
 ﻿/*
- * Copyright (c) 2023 Peraton Labs
+ * Copyright (c) 2023-2024 Peraton Labs
  * SPDX-License-Identifier: Apache-2.0
- * @author tchen
+ * 
+ * Distribution Statement “A” (Approved for Public Release, Distribution Unlimited).
  */
 
 #pragma once
@@ -9,10 +10,14 @@
 #include <fstream>
 
 #include "Config.hpp"
+#include "VerifierCL.hpp"
 #include "Message.hpp"
 #include "Device.hpp"
+#include "DeviceManager.hpp"
 #include "Server.hpp"
+#include "RSASign.hpp"
 #include "EndpointSock.hpp"
+#include "MeasurementLog.hpp"
 #include "Log.hpp"
 
 using namespace std;
@@ -20,17 +25,18 @@ using namespace std;
 class Verifier : public Server
 {
 private:
-    Endpoint *aService;
     Endpoint *alertEndpoint;
-    Endpoint *guiEndpoint;
-
-    ofstream statsFile;
+    VerifierCL &cli;
+    RSASign rsaSign;
+    MeasurementLog measurementLog;
 
 protected:
     Message * decodeMessage(uint8_t dataArray[], uint32_t len);
-    Message * handleMessage(Message *message, EndpointSock *src, Device *device, uint8_t *serialized, uint32_t len);
-    Message * handleAttestationRequest(AttestationRequest *attReq, EndpointSock *src, Device *device);
-    Message * handleEvidence(Evidence *evidence, EndpointSock *sr, Device *devicec);
+    Message * handleMessage(DeviceManager &deviceManager, Message *message, EndpointSock *src, Device *device,
+                            uint8_t *serialized, uint32_t len);
+    Message * handleAttestationRequest(DeviceManager &deviceManager, AttestationRequest *attReq, EndpointSock *src,
+                                       Device *device);
+    Message * handleEvidence(DeviceManager &deviceManager, Evidence *evidence, EndpointSock *sr, Device *devicec);
     Message * handlePassportResponse(PassportResponse *passportResponse, Device *device);
 
     void prepareGrant(Grant *grant);
@@ -40,26 +46,32 @@ protected:
     bool verifyBootTime(EvidenceItem *item, Device *device);
     bool verifyConfigs(EvidenceItem *item, Device *device, EvidenceType type);
     bool verifyUDF(EvidenceItem *item, Device *device, EvidenceType type);
-    bool verifyHashing(EvidenceItem *item, Device *device, EvidenceType type, unsigned char *bufPtr, int fileSize, int fd);
+    bool verifyHashing(EvidenceItem *item, Device *device, EvidenceType type, unsigned char *bufPtr, int fileSize);
 
     string receiveDeviceID(int dev_sock);
 
+    void runGuiService();
     void runService();
-    void sendAlert(Reason reason, string deviceID, EndpointSock *src);
+    void sendAlert(DeviceManager &deviceManager, Reason reason, string deviceID, EndpointSock *src);
     void publish(Evidence *evidence, bool verified);
 
 public:
-    Verifier(Config &config, Board *board, CommandLine &cli)
+    Verifier(Config &config, Board *board, VerifierCL &cli)
         : Server(config, board, cli),
-        aService(config.getComponent().getAService())
+          cli(cli),
+          rsaSign(cli.getSigningKey()),
+          measurementLog(cli.getLogDir(), "ra.csv", cli.getLogMaxSize(), cli.getLogMaxFiles())
     {
-        this->endpoint.copy(*config.getComponent().getIncoming());
+        if (config.getComponent().getIncoming() != NULL)
+            this->endpoint.copy(*config.getComponent().getIncoming());
+        else {
+            SD_LOG(LOG_ERR, "null incoming endpoint");
+            exit(1);
+        }
 
         alertEndpoint = config.getComponent().getOutgoing();
-        guiEndpoint   = config.getComponent().getOutgoing2();
-
-        statsFile.open("ra.csv", ios::out | ios::app);
     }
 
     static void * serviceControl(void *); // just to have a static method to run the thread
+    static void * guiServiceControl(void *p);
 };

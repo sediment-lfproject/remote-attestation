@@ -1,6 +1,7 @@
 #!/bin/bash
-# Copyright (c) 2023 Peraton Labs
+# Copyright (c) 2023-2024 Peraton Labs
 # SPDX-License-Identifier: Apache-2.0
+# Distribution Statement “A” (Approved for Public Release, Distribution Unlimited).
 #
 # Setup a work space called `work` with two windows
 # first window has 3 panes.

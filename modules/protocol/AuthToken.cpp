@@ -1,7 +1,8 @@
 ﻿/*
- * Copyright (c) 2023 Peraton Labs
+ * Copyright (c) 2023-2024 Peraton Labs
  * SPDX-License-Identifier: Apache-2.0
- * @author tchen
+ * 
+ * Distribution Statement “A” (Approved for Public Release, Distribution Unlimited).
  */
 
 #include <vector>
@@ -32,9 +33,8 @@ uint32_t AuthToken::getSize()
 
 string AuthToken::toString()
 {
-    return SD_TO_STRING(
-        "\nnonce: " + Log::toHex(nonce)
-        + "\ndigest: " + Log::toHex(digest));
+    return "\nnonce: " + Log::toHex(nonce) +
+           "\ndigest: " + Log::toHex(digest);
 }
 
 void AuthToken::decode(Vector &data)

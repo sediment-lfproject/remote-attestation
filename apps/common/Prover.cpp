@@ -1,7 +1,8 @@
 ﻿/*
- * Copyright (c) 2023 Peraton Labs
+ * Copyright (c) 2023-2024 Peraton Labs
  * SPDX-License-Identifier: Apache-2.0
- * @author tchen
+ * 
+ * Distribution Statement “A” (Approved for Public Release, Distribution Unlimited).
  */
 
 #include <vector>
@@ -28,20 +29,26 @@ using namespace std;
 #define RA_PORT          8899 // TODO: on-deman RA
 
 static bool isAttestation(MessageID id);
+static bool isRevocation(MessageID id);
 
 static int full_reset_count = 0;
 static bool proc_completed  = false;
 
+bool Prover::suspend = false;
+
 void Prover::run()
 {
-    attestSqn = board->getAttestSqn();
-    seecSqn = board->getSeecSqn();
+    attestSqn   = board->getAttestSqn();
+    seecSqn     = board->getSeecSqn();
+    revCheckSqn = board->getRevCheckSqn();
+    revAckSqn   = board->getRevAckSqn();
 
     if (config.getTransport() == TRANSPORT_SEDIMENT_MQTT) {
         string url = config.getMqttUrl();
         bool ok    = mqtt.connect(url, config.getComponent().getID());
         if (!ok)
             return;
+
         while (!mqtt.isConnected()) {
             board->sleepSec(1);
         }
@@ -53,23 +60,38 @@ void Prover::run()
         if (isAttestation(expecting)) {
             ep = &endpoint;
         }
+        else if (isRevocation(expecting)) {
+            ep = &revEndpoint;
+        }
         else {
             ep = &rpEndpoint;
         }
-
-        mySock = Comm::connectTcp(ep);
-        if (mySock < 0) {
-            toGiveup(false, &proc_fail_count, true);
+        // do not TCP connect if using mqtt to send data since
+        // a large number of subscribers (provers) will cause
+        // many socket opens and closes on firewall and led
+        // to connection delays or errors for all provers.
+        bool noConn = (config.getTransport() == TRANSPORT_SEDIMENT_MQTT && expecting == DATA);
+        mySock = -1;
+        if (!noConn) {
+            mySock = Comm::connectTcp(ep);
+            if (mySock < 0) {
+                toGiveup(false, &proc_fail_count, true);
+            }
         }
-        else {
+        if (noConn || mySock >= 0) {
             proc_completed = true;
             runProcedure(mySock);
             toGiveup(proc_completed, &proc_fail_count, true);
 
-            close(mySock);
+            if (!noConn)
+                close(mySock);
             SD_LOG(LOG_DEBUG, "closed socket");
         }
         pause(proc_fail_count);
+
+        while (suspend) {  // for Zephyr device to suspend SEDIMENT
+            board->sleepSec(1);
+        }
     }
     mqtt.disconnect();
 }
@@ -150,13 +172,25 @@ void Prover::pause(int bad_proc_count)
         else if (cause == CAUSE_INVALID_PASSPORT) {
             delay = config.getReportInterval();
             // delay = board->getReportInterval();  // for demo purposes, the interval is reloaded each time
-         }
+        }
     }
+    else if (expecting == ATTESTATION_REQUEST) {
+        if (cause == CAUSE_PERIODIC) {
+            delay = passport.getExpireDate() - board->getTimestamp();
+            SD_LOG(LOG_WARNING, "passport expired in %d seconds", delay);
+        }
+    }    
 
     if (full_reset_count > 0 || bad_proc_count > 0) {
-        delay = (1 << ((full_reset_count * MAX_FAILURES + bad_proc_count - 1) / MAX_FAILURES));
-        delay = (delay > MAX_DELAY) ? MAX_DELAY : delay;
-        SD_LOG(LOG_WARNING, "next attempt in %d seconds", delay);
+        if (config.getFixedDelay() > 0) {
+            delay = config.getFixedDelay();
+            SD_LOG(LOG_WARNING, "next attempt in %d seconds (fixed)", delay);
+        }
+        else {
+            delay = (1 << ((full_reset_count * MAX_FAILURES + bad_proc_count - 1) / MAX_FAILURES));
+            delay = (delay > MAX_DELAY) ? MAX_DELAY : delay;
+            SD_LOG(LOG_WARNING, "next attempt in %d seconds", delay);
+        }
     }
 
     if (delay > 0)
@@ -192,6 +226,9 @@ Message * Prover::decodeMessage(uint8_t dataArray[], uint32_t len)
         break;
     case PERMISSION:
         message = new Permission();
+        break;
+    case REVOCATION_ACK:
+        message = new Data();
         break;
     case RESULT:
         message = new Result();
@@ -244,17 +281,36 @@ bool Prover::moveTo(MessageID id, Message *received)
     case KEY_CHANGE:
         to_send   = prepareKeyChange(received);
         expecting = DATA; // no response, just move to the next procedure
+#if defined(SEEC_ENABLED)
+        if (config.isSeecEnabled())
+            expecting = REVOCATION_CHECK; // if SEEC is enabled, check for Revocation(s) before preparing data
+#endif
         towait    = false;
+        break;
+    case REVOCATION_CHECK:
+        expecting = DATA;
+        towait = false;
+#if defined(SEEC_ENABLED)
+        if (config.isSeecEnabled()) {
+            to_send   = prepareRevocationCheck(received);
+            expecting = REVOCATION_ACK;
+            towait = true;
+        }
+#endif
         break;
     case DATA:
         to_send = prepareData(received);
-
         if (config.getTransport() == TRANSPORT_SEDIMENT_MQTT) {
             towait = false;
             cause = CAUSE_PERIODIC;
+#if defined(SEEC_ENABLED)
+            if (config.isSeecEnabled())
+                expecting = REVOCATION_CHECK; // if SEEC is enabled, check for Revocation(s) before preparing data
+#endif
         }
-        else
+        else {
             expecting = RESULT;
+        }
         break;
     default:
         if (received != NULL)
@@ -296,6 +352,9 @@ bool Prover::handleMessage(Message *message)
     case RESULT:
         return handleResult(message);
 
+    case REVOCATION_ACK:
+        return handleRevocationAck(message);
+
     default:
         SD_LOG(LOG_ERR, "unexpected message received %s", message->toString().c_str());
     }
@@ -317,8 +376,6 @@ bool Prover::authenticate(Message *received, uint8_t *serialized, uint32_t len)
     if (!config.isAuthenticationEnabled()) {
         SD_LOG(LOG_WARNING, "authentication disabled");
         return true;
-
-        ;
     }
 
     if (received == NULL) {
@@ -491,16 +548,16 @@ Message * Prover::prepareEvidence(Message *received)
             break;
         case EVIDENCE_CONFIGS:
             itemOk = prepareEvidenceConfigs(challenge, &items[count], &elapsed, &optional);
-            count++;       
+            count++;
             break;
         case EVIDENCE_UDF_LIB:
-#ifdef PLATFORM_RPI        
+#ifdef PLATFORM_RPI
             itemOk = prepareEvidenceUDFLib(challenge, &items[count], &elapsed, &optional);
             count++;
 #else
             SD_LOG(LOG_ERR, "UDF lib not supported for non-Linux based devices");
             itemOk = false;
-#endif            
+#endif
             break;
         case EVIDENCE_UDF1:
         case EVIDENCE_UDF2:
@@ -548,13 +605,13 @@ bool Prover::handleGrant(Message *received)
     transit(PASSPORT_REQUEST, CAUSE_PERIODIC);
 #else
     if (config.isSeecEnabled())
-        expecting = PASSPORT_CHECK;
+        transit(PASSPORT_CHECK, CAUSE_INIT);
     else {
-        expecting = ATTESTATION_REQUEST;
+        transit(PASSPORT_REQUEST, CAUSE_PERIODIC);
     }
 #endif
     proc_completed   = true;
-    full_reset_count = 0;
+    // full_reset_count = 0;
 
     return true;
 }
@@ -577,6 +634,7 @@ bool Prover::handlePermission(Message *received)
     endpoint.copy(((Permission *) received)->getEndpoint());
 
     transit(DATA, cause);
+    full_reset_count = 0;
 
     return true;
 }
@@ -619,24 +677,15 @@ Message * Prover::prepareKeyChange(Message *received)
 #endif // ifdef SEEC_ENABLED
 }
 
-Message * Prover::prepareData(Message *received)
+Message *Prover::prepareRevocationCheck(Message *received)
 {
     (void) received;
 #ifdef SEEC_ENABLED
     Data *data = new Data();
+    data->setId(REVOCATION_CHECK);
 
-    uint32_t temp  = 0;
-    uint32_t humid = 0;
-
-    if (board == NULL) {
-        SD_LOG(LOG_ERR, "Prover: null board");
-        return NULL;
-    }
-    temp  = board->getTemperature();
-    humid = board->getHumidity();
-
-    seecSqn++;
-    board->saveSeecSqn(seecSqn);
+    revCheckSqn++;
+    board->saveRevCheckSqn(revCheckSqn);
 
     Crypto *crypto = seec.getCrypto();
     if (crypto == NULL) {
@@ -646,8 +695,106 @@ Message * Prover::prepareData(Message *received)
 
     const int message_size = config.getPayloadSize();
     char message[message_size];
+    memset(message, '_', message_size);  // pad the buffer
+    message[message_size - 1] = '\0';
+
+    Vector &payload = data->getPayload();
+    MeasurementList &measList = data->getMeasurementList();
+
+    seec.revocationCheck(data->getIv(), data->getPayload(), message_size, measList, board,
+                         config.getComponent().getID(), crypto, message);
+
+    Vector &cksum = data->getChecksum();
+    if (config.isSigningEnabled()) {
+        cksum.resize(Crypto::DATA_CHECKSUM_BYTES);
+        Block blocks[] = {
+                { .block = payload.at(0),  .size = (int) payload.size() },
+        };
+        uint64_t start_time = board->getTimeInstant();
+        crypto->checksum(KEY_AUTH, blocks, sizeof(blocks) / sizeof(Block), cksum.at(0),
+                         Crypto::DATA_CHECKSUM_BYTES);
+        uint32_t elapsed = board->getElapsedTime(start_time);
+        measList.add(MEAS_HMAC_SIGNING, elapsed, payload.size());
+        cksum.inc(Crypto::DATA_CHECKSUM_BYTES);
+    }
+    else {
+        cksum.resize(0);
+    }
+
+    return data;
+
+#else // ifdef SEEC_ENABLED
+    SD_LOG(LOG_ERR, "Revocation Check disabled");
+    return NULL;
+
+#endif // ifdef SEEC_ENABLED
+}
+
+bool Prover::handleRevocationAck(Message *received)
+{
+#ifdef SEEC_ENABLED
+    MessageID id = received->getId();
+    if (id != REVOCATION_ACK) {
+        SD_LOG(LOG_ERR, "expecting Revocation Acknowledgement, received %s", received->idToString().c_str());
+        return false;
+    }
+
+    Crypto *crypto = seec.getCrypto();
+    if (crypto == NULL) {
+        SD_LOG(LOG_ERR, "null crypto");
+        return NULL;
+    }
+
+    Data *data = (Data *) received;
+
+    MeasurementList &measList = data->getMeasurementList();
+
+    uint32_t revAckSqn = board->getRevAckSqn();
+    // revAckSqn is updated by revocationAck
+    seec.revocationAck(data->getIv(), data->getPayload(), board, measList,revAckSqn);
+    board->saveRevAckSqn(revAckSqn);
+
+    cause = CAUSE_PERIODIC;
+    expecting = DATA;
+    // TODO (tchen): This is a work around
+    // As is, handleResult() is never called and passport
+    if (isPassportExipred()) {
+        conditional_transit(CAUSE_INVALID_PASSPORT, CAUSE_INVALID_PASSPORT);
+    }
+    return true;
+
+#else // ifdef SEEC_ENABLED
+    SD_LOG(LOG_ERR, "Revocation Acknowledgement disabled");
+    return true;
+
+#endif // ifdef SEEC_ENABLED
+}
+
+Message * Prover::prepareData(Message *received)
+{
+    (void) received;
+#ifdef SEEC_ENABLED
+    if (board == NULL) {
+        SD_LOG(LOG_ERR, "Prover: null board");
+        return NULL;
+    }
+
+    Crypto *crypto = seec.getCrypto();
+    if (crypto == NULL) {
+        SD_LOG(LOG_ERR, "null crypto");
+        return NULL;
+    }
+
+    Data *data = new Data();
+
+    seecSqn++;
+    board->saveSeecSqn(seecSqn);
+
+    const int message_size = config.getPayloadSize();
+    char message[message_size];
     memset(message, '_', message_size); // pad the buffer
-    int n = snprintf(message, message_size, "%d,%d,%d", seecSqn, temp, humid);
+    int n = board->getAllSensors(seecSqn, message, message_size);
+    // int n = snprintf(message, message_size, "%d,%d,%d", seecSqn, temp, humid);
     message[message_size - 1] = '\0';
     message[n] = '_';
     Vector &payload = data->getPayload();
@@ -718,8 +865,12 @@ bool Prover::handleResult(Message *received)
     }
 
     expecting = DATA;
+#if defined(SEEC_ENABLED)
+    if (config.isSeecEnabled())
+        expecting = REVOCATION_CHECK; // if SEEC is enabled, check for Revocation(s) before preparing data
+#endif
 
-    Result *result = (Result *) received;
+    Result *result        = (Result *) received;
     Acceptance acceptance = result->getAcceptance();
     if (acceptance == REJECT || acceptance == NO_COMM) {
         rejectCount++;
@@ -737,7 +888,7 @@ bool Prover::handleResult(Message *received)
     }
     else if (acceptance == ACCEPT) {
         rejectCount = 0;
-        transit(DATA, CAUSE_PERIODIC);
+        transit(expecting, CAUSE_PERIODIC);
     }
     return true;
 }
@@ -809,9 +960,9 @@ bool Prover::preapreEvidenceUDF(Challenge *challenge, EvidenceItem *item, Eviden
     item->setType(evidenceType);
     item->setEncoding(ENCODING_ENCRYPTED);
 
-    string library = sediment_home + "lib/sediment_udf.so";
-    string udf = run_udf(evidenceType, library);
-    int udflen = udf.size(); // strlen(udf);
+    string library = getSedimentHome() + "lib/sediment_udf.so";
+    string udf     = run_udf(evidenceType, library);
+    int udflen     = udf.size(); // strlen(udf);
 
     // Each block is 16 byte. If the clear-text is multiple of block size,
     // a whole new block is needed for padding.
@@ -840,7 +991,7 @@ bool Prover::preapreEvidenceUDF(Challenge *challenge, EvidenceItem *item, Eviden
 bool Prover::prepareEvidenceUDFLib(Challenge *challenge, EvidenceItem *item, uint32_t *elapsed, int *optional)
 {
     uint32_t blockSize      = challenge->getBlockSize();
-    string lib              = sediment_home + "lib/sediment_udf.so";
+    string lib              = getSedimentHome() + "lib/sediment_udf.so";
     const uint8_t *starting = (const uint8_t *) board->getStartingAddr(lib, &blockSize);
 
     SD_LOG(LOG_INFO, "attest firmware starting address: %0x", starting);
@@ -911,16 +1062,17 @@ bool Prover::prepareEvidenceFullFirmware(Challenge *challenge, EvidenceItem *ite
 bool Prover::prepareEvidenceConfigs(Challenge *challenge, EvidenceItem *item, uint32_t *elapsed, int *optional)
 {
     uint32_t blockSize;
-    char *starting = board->getConfigBlocks((int *)&blockSize);   // memoery allocation
+    char *starting = board->getConfigBlocks((int *) &blockSize); // memoery allocation
 
-    bool val = prepareEvidenceHashing(challenge, item, elapsed, optional, EVIDENCE_CONFIGS, (const uint8_t *)starting, blockSize);
+    bool val = prepareEvidenceHashing(challenge, item, elapsed, optional, EVIDENCE_CONFIGS, (const uint8_t *) starting,
+        blockSize);
     free(starting);
 
     return val;
 }
 
-bool Prover::prepareEvidenceHashing(Challenge *challenge, EvidenceItem *item, uint32_t *elapsed, 
-    int *optional, EvidenceType evidenceType, const uint8_t *starting, uint32_t blockSize)
+bool Prover::prepareEvidenceHashing(Challenge *challenge, EvidenceItem *item, uint32_t *elapsed,
+  int *optional, EvidenceType evidenceType, const uint8_t *starting, uint32_t blockSize)
 {
     vector<uint8_t> &nonce = challenge->getNonce();
 
@@ -947,7 +1099,7 @@ bool Prover::prepareEvidenceHashing(Challenge *challenge, EvidenceItem *item, ui
     item->setType(evidenceType);
     item->setEncoding(ENCODING_HMAC_SHA256);
 
-    return true;    
+    return true;
 }
 
 void Prover::setTimestamp(Message *message)
@@ -969,6 +1121,28 @@ void Prover::calAuthToken(Message *message, uint8_t *serialized, uint32_t len)
     crypto->calDigest(authToken, serialized, len, message->getPayloadOffset());
 }
 
+void Prover::finalizeAndSend(int peer_sock, Message *message)
+{
+    setTimestamp(message);
+    AuthToken &authToken = message->getAuthToken();
+
+    uint32_t msg_len;
+    uint8_t *serialized = message->serialize(&msg_len);
+
+    calAuthToken(message, serialized, msg_len);
+
+    uint32_t size = authToken.getSize();
+    Vector data(size);
+    authToken.encode(data);
+
+    memcpy(serialized + AUTH_TOKEN_OFFSET, (char *) data.at(0), authToken.getSize());
+
+    sendMessage(peer_sock, message->getId(), serialized, msg_len);
+    free(serialized);
+
+    SD_LOG(LOG_DEBUG, "sent (%d).........%s", msg_len, message->toString().c_str());
+}
+
 static bool isAttestation(MessageID id)
 {
     switch (id) {
@@ -983,10 +1157,25 @@ static bool isAttestation(MessageID id)
     }
 }
 
+static bool isRevocation(MessageID id)
+{
+    switch(id) {
+    case REVOCATION_CHECK:
+        return true;
+    default:
+        return false;
+    }
+}
+
 void Prover::conditional_transit(Cause attest, Cause no_attest)
 {
     if (!config.isAttestationEnabled()) {
-        transit(DATA, no_attest);
+        if(config.isSeecEnabled()) {
+            transit(REVOCATION_CHECK, no_attest);
+        }
+        else {
+            transit(DATA, no_attest);
+        }
     }
     else {
         transit(PASSPORT_REQUEST, attest);
@@ -1012,9 +1201,11 @@ void Prover::resetProcedure(bool fullReset)
     case GRANT:
         expecting = ATTESTATION_REQUEST;
         break;
+    case REVOCATION_CHECK:
+    case REVOCATION_ACK:
     case DATA:
     case RESULT:
-        expecting = DATA;
+        expecting = REVOCATION_CHECK;
         break;
     case PASSPORT_CHECK:
     case PERMISSION:
@@ -1041,7 +1232,7 @@ bool Prover::toGiveup(bool success, int *bad_count, bool fullReset)
             if (fullReset)
                 *bad_count = 0;
             SD_LOG(LOG_ERR, "giving up after %d %s failures",
-                   MAX_FAILURES, fullReset ? "procedure" : "message");
+              MAX_FAILURES, fullReset ? "procedure" : "message");
             return true;
         }
     }
@@ -1050,7 +1241,10 @@ bool Prover::toGiveup(bool success, int *bad_count, bool fullReset)
 
 bool Prover::isPassportExipred()
 {
-    return (passport.getExpireDate() - board->getTimestamp()) < config.getReportInterval();
+    if (!config.isAttestationEnabled())
+        return false;
+
+    return ((int32_t)passport.getExpireDate() - (int32_t)board->getTimestamp()) < (int32_t)config.getReportInterval();
 }
 
 void Prover::handlePubData(char *data)

@@ -1,12 +1,10 @@
 <!--
- * Copyright (c) 2023 Peraton Labs
+ * Copyright (c) 2023-2024 Peraton Labs
  * SPDX-License-Identifier: Apache-2.0
+
+ * Distribution Statement “A” (Approved for Public Release, Distribution Unlimited).
 -->
 # The SEDIMENT Project
-
-Copyright (c) 2023 Peraton Labs
-
-Distribution A: Approved for public release; distribution unlimited. 
 
 This material is based upon work supported by the DARPA OPS-5G program under
 contract number HR001120C0156. Any opinions, findings, conclusions, or
@@ -20,7 +18,9 @@ under the [Apache 2.0](LICENSE) license unless specifically noted otherwise.
 SEDIMENTS components include an application server to receive IoT data 
 (temperature and humidity sensor readings), a remote attestation server, 
 a firewall to serve as the initial contact point for an IoT device running 
-SEDIMENT (also known as prover). The guide below assumes the servers are being 
+SEDIMENT (also known as prover). The majority of SEDIMENT is written in C++.
+It is known to be compiled cleanly by GCC 9 or later versions.
+The guide below assumes the servers are being 
 installed on Ubuntu 20.04. Other Linux distributions are expected to 
 have no issues, but have not been tested.
 
@@ -49,79 +49,115 @@ https://github.com/eclipse/paho.mqtt.cpp and
 https://github.com/eclipse/paho.mqtt.c, respectively.
 
 ## Build
-- Build the SEDIMENT executables as follows
+- Build the SEDIMENT executables, with support for sqlite only, as follows
 
         $ cd $SEDIMENT
         $ mkdir build; cd build
         $ cmake ..; make
 
+- To add support for MySQL, add '-DMYSQL_ENABLED=ON' to the cmake command.
+        $ cmake .. -DMYSQL_ENABLED=ON ; make
+
 ## Configuring the Servers
-By default, the servers are configured using configs/boards/+, 
-which contains settings such as IP address and port, and key materials. 
+By default, the servers are configured using files contained in configs/boards.
+They specify settings such as IP address, port, and key materials. 
+This server configuration files are usually generated, along with matching 
+configurations for the deivces, using the provisioner in $SEDIMENT/configs/provision. 
+See [Provision](../configs/provision/README.md) for more information. 
 For devices running Zephyr, see [Devices](../apps/zephyr/README.md) 
 for flashing configurations to the devices. 
 
-To change the settings, you can edit and save configs/boards/+ 
-and rerun the corresponding servers. 
-The servers are usually run as subscribers. So to use a different config file, 
-use the command line option -s. 
+To change the settings for a server, you can edit and save the corresponding file in configs/boards
+and restart the corresponding server, using the command line option -c. 
 For example, if the firewall is to use a config file named fw.cfg, do the following,
 
-        $ $SEDIMENT/build/firewall -s fw.cfg
+        $ $SEDIMENT/build/firewall -c fw.cfg
+
+The following are the default configuration files in configs/boards for the servers and the Linux/RPi prover.
+```
+        firewall: RA_Manager
+        verifier: RAP_Server
+        Linux/RPi prover: Ubuntu-001
+```
 
 ## Running the Servers
+The servers and the RPI prover share the following command line options.
+```
+--config <config-file>
+  Configuration file, default is app dependent.
+
+--database <Argument>
+  Use the specified device database. <Argument> can be one of 
+    <sqlite database file> for sqlite
+    <url>,<user>,<pass>,<device database> for MySQL
+  Default to $SEDIMENT/data/sediment.db
+
+--sediment-home <sediment home directory>
+  SEDIMENT installation directory, overriding the envrionment variable SEDIMENT
+
+--database-impl [ sqlite | mysql ]
+  Database implementation, default to sqlite
+
+--log-level [off, trace, debug, info, warning, error, critical]
+  Logging level, default to 'debug'
+
+--console-log-level [off, trace, debug, info, warning, error, critical]
+  Console logging level, default to 'debug'
+
+--log-dir <log-dir>
+  Write log files to this directory, defaults to '$SEDIMENT/logs'
+
+--log-file <log file>
+  Log file name, default to <executable name>.log
+
+--log-max-size <MB>
+  Maximum log file size, default to 512 MB
+
+--log-max-files <int>
+  Maximum number of rotating log files, default to 3
+
+--version
+  Display the version number
+
+--help/-h
+  This help.
+```
+
 ### Remote Attestation Server (Verifier)
 
         $ cd $SEDIMENT/build
         $ ./verifier
 
-You will see output similar to the following.
+The verifier specific command line options are the following.
 ```
-key_dist: JEDI
-report_interval: 5
-key_change_interval: 30
-enc_enabled: true
-auth_enabled: true
-attest_enabled: true
-passport_period: 86400
-pass_thru_enabled: true
-payload_size: 48
-log_level: 8
-Component: id: RAP_Server
-	incoming: TCP:127.0.0.1:8100
-	outgoing: TCP:127.0.0.1:8000
-	outgoing2: TCP:127.0.0.1:8101
-	aService: TCP:127.0.0.1:8102
+--api-port/-a <port>
+  Listen on the port for connection for service
+
+--block-size/-b <block-size>
+  Use the specified block size instead of the full firmware size in RA
+
+--gui-port/-g <port>
+  Listen on the port for connection from the GUI
+
+--no-gui/-n
+  Run without GUI
+
+--signing-key/-s <pem-key>
+  RSA signing key in pem
 ```
-Incoming is the endpoint where the verifier listens for attestation requests from provers. 
-Outgoing is the endpoint to which attestation alerts are sent (usually to the relying party). 
-Verifier also sends attestation results to GUI which listens at the Outgoing2 endpoint and 
-listens for requests from the GUI at the aService endpoint. 
 
 ### Firewall
 
         $ cd $SEDIMENT/build
         $ ./firewall
 
+The firewall specific command line options are the following.
 ```
-key_dist: JEDI
-report_interval: 5
-key_change_interval: 30
-enc_enabled: true
-auth_enabled: true
-attest_enabled: true
-passport_period: 86400
-pass_thru_enabled: true
-payload_size: 48
-log_level: 8
-Component: id: RA_Manager
-	incoming: TCP:127.0.0.1:8000
-	outgoing: TCP:127.0.0.1:8001
-	outgoing2: 
-	aService: 
+--verify-key/-v <pem-key>
+  RSA verifying key in pem, default to $SEDIMENT/data/verify_key.pem
 ```
-Incoming is the endpoint where the application server listens for encrypted sensor data, 
-while outgoing is the endpoint to which the data are forwarded. 
+
+
 
 ## Test Configuration on Linux
 The following is a diagram showing the minimum test configuration where the firewall, 
@@ -138,8 +174,7 @@ To run SEDIMENT on an Ubuntu PC, execute the following commands, each in a separ
 ```
 After the device connects to the servers, there should be messages in the terminals, 
 showing messages being exchanged among the servers and the device. 
-Sensor data (simulated) from the device should appear on the app server GUI 
-and its attestation status and history should show up on the attestation server GUI.
+The attestation status and history should show up on the attestation server GUI.
 
 If a remote attestation fails because of invalid firmware HMAC checksum in the verifier, 
 the firmware record on the server needs to be corrected. 
@@ -148,8 +183,6 @@ Copy the new firmware to the server directory as follows.
 ```
         $ cp $SEDIMENT/build/prover $SEDIMENT/data/testfiles/ubuntu
 ```
-Then update the (default) database $SEDIMENT/data/sediment.db to change 
-the firmware and size columns of the row corresponding to the device. 
 Restart both the verifier and the device. If remote attestation is successful, 
 one should see a log message containing "all evidence verified for device Ubuntu-001"
 in the verifier terminal. Note that one of the evidence types attested is the OS Version, 
@@ -172,10 +205,11 @@ Prepare RPi0 as follows.
     # scp $SEDIMENT/build/prover ubuntu:$SEDIMENT/data/testfiles/rpi
 ```
 - On the server PC, update the (default) database $SEDIMENT/data/sediment.db 
-  and change the firmware and size columns of the row corresponding to the device, e.g. RPI-001.
+  and change the verifierEndpoint column to match the IP address of the PC 
+  in the row corresponding to the device, e.g. RPI-001.
 
 - On the RPi, edit the config file, e.g. $SEDIMENT/configs/boards/RPI-001 and 
-  change the relyingPartyEndpoint column to match the IP address of the PC.
+  change the IP address in the row containing 'prover outgoing'.
 
 On PC, run the following, each in a separate terminal
 ```
@@ -185,14 +219,16 @@ On PC, run the following, each in a separate terminal
 
 On RPi
 ```
-        $ $SEDIMENT/build/prover -p $SEDIMENT/configs/boards/RPI-001
+        $ $SEDIMENT/build/prover -c $SEDIMENT/configs/boards/RPI-001
 ```
+
+The RPI prover does not have additional command line options, other than the common ones.
 
 ### Using A Zephyr Device
 Prepare a zephyr device as follows.
 
 - Build and download the firmware and configurations as described in 
-  [SEDIMENT App on Zephyr](../apps/zephyr/README.md). 
+  [SEDIMENT App on Zephyr](apps/zephyr/README.md). 
 
 - Copy the firmware to make it visible to the verifier. For example, 
 

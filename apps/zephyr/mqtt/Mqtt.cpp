@@ -1,9 +1,9 @@
 /*
- * Copyright (c) 2023 Peraton Labs
+ * Copyright (c) 2023-2024 Peraton Labs
  * SPDX-License-Identifier: Apache-2.0
- * @author tchen
+ *
+ * Distribution Statement “A” (Approved for Public Release, Distribution Unlimited).
  */
-
 #include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(net_mqtt_publisher_sample, LOG_LEVEL_DBG);
 
@@ -27,11 +27,11 @@ using namespace std;
 
 #define APP_CONNECT_TRIES      10
 #define SERVER_PORT            1883
-#define SERVER_ADDR            "10.139.80.148"
+// #define SERVER_ADDR            "192.168.0.131"
 
 #define APP_MQTT_BUFFER_SIZE   128
 
-#define MQTT_CLIENTID          "zephyr_publisher"
+// #define MQTT_CLIENTID          "zephyr_publisher"
 
 #if defined(CONFIG_USERSPACE)
 #include <zephyr/app_memory/app_memdomain.h>
@@ -124,7 +124,7 @@ void mqtt_evt_handler(struct mqtt_client *const client,
 
         break;
 
-    case MQTT_EVT_PUBREC:
+    case MQTT_EVT_PUBREC: {
         if (evt->result != 0) {
             LOG_ERR("MQTT PUBREC error %d", evt->result);
             break;
@@ -132,15 +132,15 @@ void mqtt_evt_handler(struct mqtt_client *const client,
 
         LOG_INF("PUBREC packet id: %u", evt->param.pubrec.message_id);
 
-        //        const struct mqtt_pubrel_param rel_param = {
-        //            .message_id = evt->param.pubrec.message_id
-        //        };
-        //
-        //        err = mqtt_publish_qos2_release(client, &rel_param);
+        const struct mqtt_pubrel_param rel_param = {
+            .message_id = evt->param.pubrec.message_id
+        };
+        
+        err = mqtt_publish_qos2_release(client, &rel_param);
         if (err != 0) {
             LOG_ERR("Failed to send MQTT PUBREL: %d", err);
         }
-
+        }
         break;
 
     case MQTT_EVT_PUBCOMP:
@@ -163,7 +163,7 @@ void mqtt_evt_handler(struct mqtt_client *const client,
     }
 }
 
-static void broker_init(void)
+static void broker_init(string &url)
 {
 #if defined(CONFIG_NET_IPV6)
     struct sockaddr_in6 *broker6 = (struct sockaddr_in6 *) &broker;
@@ -184,7 +184,7 @@ static void broker_init(void)
 
     broker4->sin_family = AF_INET;
     broker4->sin_port   = htons(SERVER_PORT);
-    zsock_inet_pton(AF_INET, SERVER_ADDR, &broker4->sin_addr);
+    zsock_inet_pton(AF_INET, url.c_str(), &broker4->sin_addr);
 #if defined(CONFIG_SOCKS)
     struct sockaddr_in *proxy4 = (struct sockaddr_in *) &socks5_proxy;
 
@@ -195,17 +195,17 @@ static void broker_init(void)
 #endif // if defined(CONFIG_NET_IPV6)
 }
 
-static void client_init(struct mqtt_client *client)
+static void client_init(string &url, string &id, struct mqtt_client *client)
 {
     mqtt_client_init(client);
 
-    broker_init();
+    broker_init(url);
 
     /* MQTT client configuration */
     client->broker           = &broker;
     client->evt_cb           = mqtt_evt_handler;
-    client->client_id.utf8   = (uint8_t *) MQTT_CLIENTID;
-    client->client_id.size   = strlen(MQTT_CLIENTID);
+    client->client_id.utf8   = (uint8_t *) id.c_str();
+    client->client_id.size   = id.length();
     client->password         = NULL;
     client->user_name        = NULL;
     client->protocol_version = MQTT_VERSION_3_1_1;
@@ -261,37 +261,45 @@ static void client_init(struct mqtt_client *client)
 #endif
 }
 
-bool Mqtt::connect(string &url, string &id)
+/* In this routine we block until the connected variable is 1 */
+static int try_to_connect(string &url, string &id, struct mqtt_client *client)
 {
     int rc, i = 0;
 
     while (i++ < APP_CONNECT_TRIES && !connected) {
-        printk("mqtt connecting \n");
-        client_init(&client_ctx);
+        client_init(url, id, client);
 
-        rc = mqtt_connect(&client_ctx);
+        rc = mqtt_connect(client);
         if (rc != 0) {
             printk("mqtt_connect failed: %d\n", rc);
             k_sleep(K_MSEC(APP_SLEEP_MSECS));
             continue;
         }
-        prepare_fds(&client_ctx);
+
+        prepare_fds(client);
 
         if (wait(APP_CONNECT_TIMEOUT_MS)) {
-            mqtt_input(&client_ctx);
+            mqtt_input(client);
         }
 
         if (!connected) {
-            mqtt_abort(&client_ctx);
+            mqtt_abort(client);
         }
     }
 
     if (connected) {
         printk("mqtt_connected\n");
-        return true;
+        return 0;
     }
 
-    return false;
+    return -EINVAL;
+}
+
+bool Mqtt::connect(string &url, string &id)
+{
+    int rc = try_to_connect(url, id, &client_ctx);
+    setConnected(rc == 0);
+    return rc == 0;
 }
 
 void Mqtt::publish(char *message)
@@ -299,7 +307,7 @@ void Mqtt::publish(char *message)
     struct mqtt_publish_param param;
 
     param.message.topic.qos        = MQTT_QOS_0_AT_MOST_ONCE;
-    param.message.topic.topic.utf8 = (uint8_t *) "sensor";
+    param.message.topic.topic.utf8 = (uint8_t *) topicPub.c_str();
     param.message.topic.topic.size = strlen((char *) param.message.topic.topic.utf8);
     param.message.payload.data     = (uint8_t *) message;
     param.message.payload.len      = strlen((char *) param.message.payload.data);
@@ -308,8 +316,6 @@ void Mqtt::publish(char *message)
     param.retain_flag = 0U;
 
     mqtt_publish(&client_ctx, &param);
-
-    printk("publish %s\n", message);
 }
 
 void Mqtt::disconnect()

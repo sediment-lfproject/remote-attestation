@@ -1,7 +1,8 @@
 ﻿/*
- * Copyright (c) 2023 Peraton Labs
+ * Copyright (c) 2023-2024 Peraton Labs
  * SPDX-License-Identifier: Apache-2.0
- * @author tchen
+ * 
+ * Distribution Statement “A” (Approved for Public Release, Distribution Unlimited).
  */
 
 #pragma once
@@ -20,8 +21,7 @@ private:
 
     Endpoint *incoming  = NULL;
     Endpoint *outgoing  = NULL;
-    Endpoint *aService  = NULL; // verifier attestation service
-    Endpoint *outgoing2 = NULL;
+    Endpoint *revServer = NULL; // Revocation Server
 
 public:
     ConfigComponent()
@@ -29,12 +29,11 @@ public:
 
     string toString()
     {
-        return SD_TO_STRING(
-            "id: " + id + "\n"
+        return
+              "id: " + id + "\n"
             + "\tincoming: " + (incoming == NULL ? "" : incoming->toStringOneline()) + "\n"
             + "\toutgoing: " + (outgoing == NULL ? "" : outgoing->toStringOneline()) + "\n"
-            + "\toutgoing2: " + (outgoing2 == NULL ? "" : outgoing2->toStringOneline()) + "\n"
-            + "\taService: " + (aService == NULL ? "" : aService->toStringOneline()) + "\n");
+            + "\trevServer: " + (revServer == NULL ? "" : revServer->toStringOneline()) + "\n";
     }
 
     Endpoint * getIncoming()
@@ -47,14 +46,9 @@ public:
         return outgoing;
     }
 
-    Endpoint * getOutgoing2()
+    Endpoint * getRevServer()
     {
-        return outgoing2;
-    }
-
-    Endpoint * getAService()
-    {
-        return aService;
+        return revServer;
     }
 
     string &getID()
@@ -72,18 +66,13 @@ public:
         this->id = id;
     }
 
-    void setAService(Endpoint *aService)
-    {
-        this->aService = aService;
-    }
-
     void setIncoming(Endpoint *incoming)
     {
         this->incoming = incoming;
     }
 
-    void setOutgoing2(Endpoint *outgoing2)
+    void setRevServer(Endpoint *revServer)
     {
-        this->outgoing2 = outgoing2;
+        this->revServer = revServer;
     }
 };
