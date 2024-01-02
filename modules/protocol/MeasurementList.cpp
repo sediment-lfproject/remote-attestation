@@ -1,7 +1,8 @@
 /*
- * Copyright (c) 2023 Peraton Labs
+ * Copyright (c) 2023-2024 Peraton Labs
  * SPDX-License-Identifier: Apache-2.0
- * @author tchen
+ * 
+ * Distribution Statement “A” (Approved for Public Release, Distribution Unlimited).
  */
 
 #include "MeasurementList.hpp"
@@ -24,7 +25,7 @@ string MeasurementList::toString()
     for (uint32_t i = 0; i < list.size(); i++)
         str += list[i].toString();
 
-    return SD_TO_STRING(str);
+    return str;
 }
 
 void MeasurementList::decode(Vector &data)

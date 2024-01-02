@@ -1,7 +1,8 @@
 ﻿/*
- * Copyright (c) 2023 Peraton Labs
+ * Copyright (c) 2023-2024 Peraton Labs
  * SPDX-License-Identifier: Apache-2.0
- * @author tchen
+ * 
+ * Distribution Statement “A” (Approved for Public Release, Distribution Unlimited).
  */
 
 #include <stdio.h>
@@ -20,18 +21,167 @@
 
 #include "Log.hpp"
 
-#if !defined(LOG_NONE)
-
 int Log::loglevel  = LOG_DEBUG;
-bool Log::useColor = true;
+
+/***********  Use spdlog *********************/
+#if defined(SPDLOG_ENABLED)
+#include <iostream>
+
+#include "spdlog/spdlog.h"
+#include "spdlog/sinks/stdout_color_sinks.h"
+#include "spdlog/sinks/rotating_file_sink.h"
+
+#define MULTI_SINK    "multi_sink"
+
+std::shared_ptr<spdlog::logger> sedimentLogger;
+
+static std::shared_ptr<spdlog::logger> getLogger()
+{
+    auto logger = spdlog::get(MULTI_SINK);
+    if (logger == nullptr) {
+        std::cout << "spdlog not initialized" << std::endl;
+        exit(1);
+    }
+    return logger;
+}
+
+void Log::initLog(int consoleLogLevel, int level, string &logPath, int logMaxSize, int logMaxFiles)
+{
+    Log::loglevel = level;
+
+    auto color_both_p = "%^%Y-%m-%d %T.%e [%l] %v%$";
+    auto max_size = 1048576 * logMaxSize;
+
+    auto console_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
+    console_sink->set_level((spdlog::level::level_enum) consoleLogLevel);
+    console_sink->set_pattern(color_both_p);
+
+    auto file_sink = std::make_shared<spdlog::sinks::rotating_file_sink_mt>(logPath, max_size, logMaxFiles);
+    file_sink->set_level((spdlog::level::level_enum) level);
+    file_sink->set_pattern(color_both_p);
+
+    std::vector<spdlog::sink_ptr> sinks{console_sink, file_sink};
+    auto logger = std::make_shared<spdlog::logger>(MULTI_SINK, sinks.begin(), sinks.end());
+    logger->set_level(spdlog::level::trace);
+    logger->flush_on(spdlog::level::info);   // auto flush
+    spdlog::flush_every(std::chrono::seconds(3));
+    spdlog::register_logger(logger); //if it would be used in some other place
+
+    console_sink->set_color(spdlog::level::trace,    "\033[97m");
+    console_sink->set_color(spdlog::level::debug,    "\033[97m");
+    console_sink->set_color(spdlog::level::info,     "\033[92m");
+    console_sink->set_color(spdlog::level::warn,     "\033[93m");
+    console_sink->set_color(spdlog::level::err,      "\033[91m");
+    console_sink->set_color(spdlog::level::critical, "\033[91m");
+}
+
+int Log::fromStr(string &level)
+{
+    return spdlog::level::from_str(level);
+}
+
+void Log::print(LogLevel level, const char *fmt, ...)
+{
+    auto logger = getLogger();
+    
+    char buf[DEBUG_BUF_SIZE];
+    va_list va;
+
+    memset(buf, '\0', DEBUG_BUF_SIZE);
+
+    va_start(va, fmt);
+    vsnprintf(buf, DEBUG_BUF_SIZE, fmt, va);
+    va_end(va);
+
+    switch (level) {
+    case LOG_CRIT:
+        logger->critical(buf);
+        break;
+    case LOG_ERR:
+        logger->error(buf);
+        break;
+    case LOG_WARNING:
+        logger->warn(buf);
+        break;
+    case LOG_INFO:
+        logger->info(buf);
+        break;
+    case LOG_DEBUG:
+        logger->debug(buf);
+        break;
+    case LOG_TRACE:
+        logger->trace(buf);
+        break;
+    case LOG_OFF:
+        break;
+    }
+}
+#elif defined(PLATFORM_ZEPHYR)
+///////////// Use Zephyr Logging //////////////////////////////////////
+#include <logging/log.h>
+LOG_MODULE_DECLARE(_, LOG_LEVEL_DBG);
+
+void Log::initLog(int consoleLogLevel, int level, string &logPath, int logMaxSize, int logMaxFiles)
+{
+    Log::loglevel = level;
+}
+
+int Log::fromStr(string &level)
+{
+    return 0;
+}
+
+void Log::print(LogLevel level, const char *fmt, ...)
+{
+    char buf[DEBUG_BUF_SIZE];
+    va_list va;
+
+    memset(buf, '\0', DEBUG_BUF_SIZE);
+
+    va_start(va, fmt);
+    vsnprintf(buf, DEBUG_BUF_SIZE, fmt, va);
+    va_end(va);
+
+    switch (level) {
+    case LOG_CRIT:
+        LOG_ERR("%s", buf);
+        break;
+    case LOG_ERR:
+        LOG_ERR("%s", buf);
+        break;
+    case LOG_WARNING:
+        LOG_WRN("%s", buf);
+        break;
+    case LOG_INFO:
+        LOG_INF("%s", buf);
+        break;
+    case LOG_DEBUG:
+        LOG_DBG("%s", buf);
+        break;
+    case LOG_TRACE:
+        LOG_DBG("%s", buf);
+        break;
+    case LOG_OFF:
+        break;
+    }
+}
+#else
+/*************** Use printf **************/
+#include <algorithm>
+#include <fstream>
+
+static LogLevel consoleLogLevel = LogLevel::LOG_DEBUG;
 
 #if !defined(PLATFORM_GIANT_GECKO) && !defined(PLATFORM_NRF9160)
-std::mutex mtx;
+static std::mutex mtx;
+static std::ofstream theLogFile;
+static LogLevel logLevel = LogLevel::LOG_DEBUG;
 #endif
 
-char * Log::get_timestamp(struct timeval *new_time, char *timestamp, int len)
+static char * get_timestamp(struct timeval *new_time, char *timestamp, int len)
 {
 #if defined(PLATFORM_GIANT_GECKO) || defined(PLATFORM_NRF9160)
+    (void)new_time;
     snprintf(timestamp, len, "0000-00-00 00:00:00.000");
 #else
     struct tm *ptm;
@@ -45,12 +195,22 @@ char * Log::get_timestamp(struct timeval *new_time, char *timestamp, int len)
     return timestamp;
 }
 
-void Log::log_line(LogLevel level, const char *buf)
+void Log::initLog(int clevel, int level, string &logPath, int logMaxSize, int logMaxFiles)
 {
-    if (level > loglevel && level > LOG_ERR) {
-        return;
-    }
+    (void) level;
+    (void) logMaxSize;
+    (void) logMaxFiles;
 
+    consoleLogLevel = (LogLevel) clevel;
+
+#if !defined(PLATFORM_GIANT_GECKO) && !defined(PLATFORM_NRF9160)
+    theLogFile.open(logPath, ios::out | ios::app);
+    logLevel = (LogLevel) level;
+#endif
+}
+
+static void log_line(LogLevel level, const char *buf)
+{
     struct timeval now = { 0, 0 };
 #if !defined(PLATFORM_GIANT_GECKO) && !defined(PLATFORM_NRF9160)
     gettimeofday(&now, NULL);
@@ -58,51 +218,94 @@ void Log::log_line(LogLevel level, const char *buf)
     char timestamp[40];
 
     const char *color_pfx = "", *color_sfx = "";
-    const char *time_pfx = "", *time_sfx = color_sfx;
+    // const char *time_pfx = "", *time_sfx = color_sfx;
     const char *level_strings[] = {
-        "ERROR", "ERROR", "ERROR", "ERROR", "WARN", "NOTE", "INFO", "DEBUG", "TRACE"
+        "trace", "debug", "info", "warning", "error", "critical", "off"
     };
     const char *tag = level_strings[level];
 
-    if (useColor) {
-        color_pfx = "";
-        color_sfx = "\33[0m";
-        time_pfx  = "\e[0;96m";
-        time_sfx  = color_sfx;
+    color_pfx = "";
+    color_sfx = "\33[0m";
+    // time_pfx  = "\e[0;96m";
+    // time_sfx  = color_sfx;
 
-        switch (level) {
-        case LOG_EMERG:
-            color_pfx = "\e[1;91m"; /* bright + Red */
-            break;
-        case LOG_ALERT:
-            color_pfx = "\e[1;91m"; /* bright + Red */
-            break;
-        case LOG_CRIT:
-            color_pfx = "\e[1;91m"; /* bright + Red */
-            break;
-        case LOG_ERR:
-            color_pfx = "\e[0;91m"; /* bright + Red */
-            break;
-        case LOG_WARNING:
-            color_pfx = "\e[0;95m"; /* Purple */
-            break;
-        case LOG_NOTICE:
-            color_pfx = "\e[0;93m"; /* Yellow */
-            break;
-        case LOG_INFO:
-            color_pfx = "\e[0;92m"; /* Green */
-            break;
-        case LOG_DEBUG:
-            // color_pfx = "\e[1;92m"; /* White */
-            break;
-        case LOG_TRACE:
-            break;
-        }
+    switch (level) {
+    case LOG_CRIT:
+        color_pfx = "\e[1;91m"; /* bright + Red */
+        break;
+    case LOG_ERR:
+        color_pfx = "\e[0;91m"; /* bright + Red */
+        break;
+    case LOG_WARNING:
+        color_pfx = "\e[0;93m"; /* Purple */
+        break;
+    case LOG_INFO:
+        color_pfx = "\e[0;92m"; /* Green */
+        break;
+    case LOG_DEBUG:
+        // color_pfx = "\e[1;92m"; /* White */
+        break;
+    case LOG_TRACE:
+    case LOG_OFF:
+        break;
     }
-    fprintf(stdout, "%s%s%s [%-5s] %s%s%s\n", time_pfx, get_timestamp(&now, timestamp, 40), time_sfx,
-      tag, color_pfx, buf, color_sfx);
-    fflush(stdout);
+    get_timestamp(&now, timestamp, 40);
+
+    if (level >= consoleLogLevel) {
+        fprintf(stdout, "%s%s [%s] %s%s\n", color_pfx, timestamp, tag, buf, color_sfx);
+        fflush(stdout);
+    }
+#if !defined(PLATFORM_GIANT_GECKO) && !defined(PLATFORM_NRF9160)
+    if (level >= logLevel)
+        theLogFile << timestamp << " [" << tag << "] " << buf << endl;
+#endif
 }
+
+int Log::fromStr(string &level)
+{
+    std::transform(level.begin(), level.end(), level.begin(), [](unsigned char c){
+        return std::tolower(c);
+    });
+
+    if (level == "trace")
+        return LOG_TRACE;
+    else if (level == "debug")
+        return LOG_DEBUG;
+    else if (level == "info")
+        return LOG_INFO;
+    else if (level == "warn")
+        return LOG_WARNING;
+    else if (level == "error")
+        return LOG_ERR;
+    else if (level == "critical")
+        return LOG_CRIT;
+    else if (level == "off")
+        return LOG_OFF;
+    else
+        return LOG_OFF;
+}
+
+void Log::print(LogLevel level, const char *fmt, ...)
+{
+    char buf[DEBUG_BUF_SIZE];
+    va_list va;
+
+    memset(buf, '\0', DEBUG_BUF_SIZE);
+
+    va_start(va, fmt);
+    vsnprintf(buf, DEBUG_BUF_SIZE, fmt, va);
+    va_end(va);
+
+#if defined(PLATFORM_GIANT_GECKO) || defined(PLATFORM_NRF9160)
+    log_line(level, buf);
+#else
+    mtx.lock();
+    log_line(level, buf);
+    mtx.unlock();
+#endif
+}
+
+#endif
 
 string Log::toMessageID(MessageID id)
 {
@@ -148,6 +351,15 @@ string Log::toMessageID(MessageID id)
 
     case CONFIG:
         return "CONFIG";
+
+    case REVOCATION:
+        return "REVOCATION";
+
+    case REVOCATION_CHECK:
+        return "REVOCATION_CHECK";
+
+    case REVOCATION_ACK:
+        return "REVOCATION_ACK";
 
     default:
         return "BAD MESSAGE ID";
@@ -425,6 +637,27 @@ string Log::toMeasurementType(MeasurementType measurementType)
     case MEAS_PUB_AUTH:
         return "PUB_AUTH";
 
+    case MEAS_REV_AES_ENCRYPTION:
+        return "REV_AES_ENCRYPTION";
+
+    case MEAS_REV_AES_DECRYPTION:
+        return "REV_AES_DECRYPTION";
+
+    case MEAS_REV_CYCLE_INIT:
+        return "REV_CYCLE_INIT";
+
+    case MEAS_REV_JEDI_ADJUST_PRECOMPUTE:
+        return "REV_JEDI_ADJUST_PRECOMPUTE";
+
+    case MEAS_REV_JEDI_ENCRYPT:
+        return "REV_JEDI_ENCRYPT";
+
+    case MEAS_REV_JEDI_QUALIFY_KEY:
+        return "REV_JEDI_QUALIFY_KEY";
+
+    case MEAS_REV_JEDI_SIGN:
+        return "REV_JEDI_SIGN";
+
     default:
         return "Bad Measurement Type";
     }
@@ -439,63 +672,9 @@ string Log::toDataTransport(DataTransport dataTransport)
         return "mqtt";
     case TRANSPORT_SEDIMENT_MQTT:
         return "sediment_mqtt";
+    default:
+        return "unknown transport";
     }
-}
-
-void Log::print(LogLevel level, const char *fmt, ...)
-{
-    char buf[DEBUG_BUF_SIZE];
-    va_list va;
-
-    memset(buf, '\0', DEBUG_BUF_SIZE);
-
-    va_start(va, fmt);
-    vsnprintf(buf, DEBUG_BUF_SIZE, fmt, va);
-    va_end(va);
-
-#if defined(PLATFORM_GIANT_GECKO) || defined(PLATFORM_NRF9160)
-    log_line(level, buf);
-#else
-    mtx.lock();
-    log_line(level, buf);
-    mtx.unlock();
-#endif
-}
-
-void Log::plain(Color color, const char *fmt, ...)
-{
-    char buf[DEBUG_BUF_SIZE];
-    va_list va;
-
-    memset(buf, '\0', DEBUG_BUF_SIZE);
-
-    va_start(va, fmt);
-    vsnprintf(buf, DEBUG_BUF_SIZE, fmt, va);
-    va_end(va);
-
-    const char *color_pfx = "", *color_sfx = "";
-    switch (color) {
-    case COLOR_NONE:
-        break;
-    case COLOR_GREEN:
-        color_pfx = "\e[0;92m"; /* Green */
-        color_sfx = "\33[0m";
-        break;
-    case COLOR_RED:
-        color_pfx = "\e[0;91m"; /* bright + Red */
-        color_sfx = "\33[0m";
-        break;
-    }
-
-#if defined(PLATFORM_GIANT_GECKO) || defined(PLATFORM_NRF9160)
-    fprintf(stdout, "%s%s%s\n", color_pfx, buf, color_sfx);
-    fflush(stdout);
-#else
-    mtx.lock();
-    fprintf(stdout, "%s%s%s\n", color_pfx, buf, color_sfx);
-    fflush(stdout);
-    mtx.unlock();
-#endif
 }
 
 string Log::toHex(char *unprintable, int len)
@@ -541,5 +720,3 @@ string Log::toHex(Vector &vec)
 {
     return toHex((char *) vec.at(0), vec.size());
 }
-
-#endif // LOG_VERBOSE

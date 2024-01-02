@@ -1,7 +1,8 @@
 ﻿/*
- * Copyright (c) 2023 Peraton Labs
+ * Copyright (c) 2023-2024 Peraton Labs
  * SPDX-License-Identifier: Apache-2.0
- * @author tchen
+ * 
+ * Distribution Statement “A” (Approved for Public Release, Distribution Unlimited).
  */
 
 #include <fcntl.h>
@@ -93,24 +94,80 @@ uint32_t BoardRPI::getTimestamp()
     return s;
 }
 
+#if 0
 uint32_t BoardRPI::getTemperature()
 {
     static uint32_t temp = 25000;
 
-    int fd = open("/sys/class/thermal/thermal_zone0/temp", O_RDONLY);
-
+    // If the pi has a pimoroni board attached, follow the instructions in
+    // https://learn.pimoroni.com/article/getting-started-with-enviro-plus
+    // to install the necessary python libraries. Then run ~/sediment/utils/pi-sediment.py 
+    // before SEDIMENT prover is started. 
+    // The script writes a temperautre reading per second to /tmp/temperature.txt.
+    int fd = open("/tmp/temperature.txt", O_RDONLY);
     if (fd == -1) {
-        temp += (rand() % 2000) - 1000;
-        return temp;
+        // otherwise read the cpu temperature
+        fd = open("/sys/class/thermal/thermal_zone0/temp", O_RDONLY);
+        if (fd == -1) {
+            // otherwise generate a random value
+            temp += (rand() % 2000) - 1000;
+            return temp;
+        }
     }
 
     char buf[256] = "";
-    ssize_t nb    = read(fd, buf, sizeof(buf));
+    ssize_t nb = read(fd, buf, sizeof(buf));
     close(fd);
 
     buf[nb] = '\0';
 
     return (uint32_t) atoi(buf);
+}
+
+uint32_t BoardRPI::getHumidity()
+{
+    static uint32_t temp = 60000;
+
+    // If the pi has a pimoroni board attached, follow the instructions in
+    // https://learn.pimoroni.com/article/getting-started-with-enviro-plus
+    // to install the necessary python libraries. Then run ~/sediment/utils/pi-sediment.py 
+    // before SEDIMENT prover is started. 
+    // The script writes a humidity reading per second to /tmp/humidity.txt.
+    int fd = open("/tmp/humidity.txt", O_RDONLY);
+    if (fd == -1) {
+        // otherwise generate a random value
+        temp += (rand() % 3000) - 1000;
+        return temp;
+    }
+
+    char buf[256] = "";
+    ssize_t nb = read(fd, buf, sizeof(buf));
+    close(fd);
+
+    buf[nb] = '\0';
+
+    return (uint32_t) atoi(buf);
+}
+#endif
+
+int BoardRPI::getAllSensors(uint32_t sqn, char *buf, uint32_t len) 
+{
+    // If the pi has a pimoroni board attached, follow the instructions in
+    // https://learn.pimoroni.com/article/getting-started-with-enviro-plus
+    // to install the necessary python libraries. Then run ~/sediment/utils/pi-sediment.py 
+    // before SEDIMENT prover is started. 
+    // The script writes all readings per second to /tmp/sensors.txt.
+    int fd = open("/tmp/sensors.txt", O_RDONLY);
+    if (fd == -1) {
+        return Board::getAllSensors(sqn, buf, len);
+    }
+    ssize_t n = sprintf(buf, "%d,", sqn);
+    ssize_t nb = read(fd, buf + n, len);
+    ssize_t sum = n + nb;
+    buf[sum] = '\0';
+    close(fd);
+
+    return sum;
 }
 
 static void get_pathname(char *buf, char *pathname)
@@ -311,6 +368,32 @@ uint32_t BoardRPI::getSeecSqn()
     char filename[128];
 
     intFile((char *)"sqn", (char *)"seec", id, filename);
+    return loadSqn(filename);
+}
+
+void BoardRPI::saveRevCheckSqn(uint32_t sqn)
+{
+    saveInt((char *)"sqn", (char *)"rev-check", id, sqn);
+}
+
+uint32_t BoardRPI::getRevCheckSqn()
+{
+    char filename[128];
+
+    intFile((char *)"sqn", (char *)"rev-check", id, filename);
+    return loadSqn(filename);
+}
+
+void BoardRPI::saveRevAckSqn(uint32_t sqn)
+{
+    saveInt((char *)"sqn", (char *)"rev-ack", id, sqn);
+}
+
+uint32_t BoardRPI::getRevAckSqn()
+{
+    char filename[128];
+
+    intFile((char *)"sqn", (char *)"rev-ack", id, filename);
     return loadSqn(filename);
 }
 

@@ -1,0 +1,637 @@
+/*
+ * Copyright (c) 2018 Nordic Semiconductor ASA
+ *
+ * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
+ */
+
+#include <zephyr/kernel.h>
+#include <stdio.h>
+#include <zephyr/drivers/uart.h>
+#include <string.h>
+#include <zephyr/random/rand32.h>
+#include <zephyr/net/mqtt.h>
+#include <zephyr/net/socket.h>
+#if defined(CONFIG_NRF_MODEM_LIB)
+#include <nrf_modem_at.h>
+#endif /* CONFIG_NRF_MODEM_LIB */
+#include <modem/lte_lc.h>
+#include <zephyr/logging/log.h>
+#if defined(CONFIG_MODEM_KEY_MGMT)
+#include <modem/modem_key_mgmt.h>
+#endif
+#if defined(CONFIG_LWM2M_CARRIER)
+#include <lwm2m_carrier.h>
+#endif
+#include <dk_buttons_and_leds.h>
+
+#include "Mqtt.hpp"
+#include "StateMachine.hpp"
+#include "Log.hpp"
+// #include "certificates.h"
+#define CONFIG_LTE_CONNECT_RETRY_DELAY_S  60
+#define CONFIG_MQTT_MESSAGE_BUFFER_SIZE  128
+#define CONFIG_MQTT_PAYLOAD_BUFFER_SIZE  128
+#define CONFIG_MQTT_PUB_TOPIC            "sensor"
+#define CONFIG_MQTT_SUB_TOPIC            "controlX"
+// #define CONFIG_MQTT_BROKER_HOSTNAME      "47.16.2.18"
+#define CONFIG_MQTT_BROKER_PORT          1883
+// #define CONFIG_MQTT_CLIENT_ID            "Nordic-001"
+bool mqttConnected = false;
+
+LOG_MODULE_REGISTER(mqtt_simple, LOG_LEVEL_DBG);
+
+/* Buffers for MQTT client. */
+static uint8_t rx_buffer[CONFIG_MQTT_MESSAGE_BUFFER_SIZE];
+static uint8_t tx_buffer[CONFIG_MQTT_MESSAGE_BUFFER_SIZE];
+static uint8_t payload_buf[CONFIG_MQTT_PAYLOAD_BUFFER_SIZE];
+
+/* The mqtt client struct */
+static struct mqtt_client client;
+
+/* MQTT Broker details. */
+static struct sockaddr_storage broker;
+
+/* File descriptor */
+static struct pollfd fds;
+
+#if defined(CONFIG_MQTT_LIB_TLS)
+static int certificates_provision(void)
+{
+	int err = 0;
+
+	LOG_INF("Provisioning certificates");
+
+#if defined(CONFIG_NRF_MODEM_LIB) && defined(CONFIG_MODEM_KEY_MGMT)
+
+	err = modem_key_mgmt_write(CONFIG_MQTT_TLS_SEC_TAG,
+				   MODEM_KEY_MGMT_CRED_TYPE_CA_CHAIN,
+				   CA_CERTIFICATE,
+				   strlen(CA_CERTIFICATE));
+	if (err) {
+		LOG_ERR("Failed to provision CA certificate: %d", err);
+		return err;
+	}
+
+#elif defined(CONFIG_BOARD_QEMU_X86) && defined(CONFIG_NET_SOCKETS_SOCKOPT_TLS)
+
+	err = tls_credential_add(CONFIG_MQTT_TLS_SEC_TAG,
+				 TLS_CREDENTIAL_CA_CERTIFICATE,
+				 CA_CERTIFICATE,
+				 sizeof(CA_CERTIFICATE));
+	if (err) {
+		LOG_ERR("Failed to register CA certificate: %d", err);
+		return err;
+	}
+
+#endif
+
+	return err;
+}
+#endif /* defined(CONFIG_MQTT_LIB_TLS) */
+
+#if defined(CONFIG_LWM2M_CARRIER)
+K_SEM_DEFINE(carrier_registered, 0, 1);
+int lwm2m_carrier_event_handler(const lwm2m_carrier_event_t *event)
+{
+	switch (event->type) {
+	case LWM2M_CARRIER_EVENT_BSDLIB_INIT:
+		LOG_INF("LWM2M_CARRIER_EVENT_BSDLIB_INIT");
+		break;
+	case LWM2M_CARRIER_EVENT_CONNECTING:
+		LOG_INF("LWM2M_CARRIER_EVENT_CONNECTING");
+		break;
+	case LWM2M_CARRIER_EVENT_CONNECTED:
+		LOG_INF("LWM2M_CARRIER_EVENT_CONNECTED");
+		break;
+	case LWM2M_CARRIER_EVENT_DISCONNECTING:
+		LOG_INF("LWM2M_CARRIER_EVENT_DISCONNECTING");
+		break;
+	case LWM2M_CARRIER_EVENT_DISCONNECTED:
+		LOG_INF("LWM2M_CARRIER_EVENT_DISCONNECTED");
+		break;
+	case LWM2M_CARRIER_EVENT_BOOTSTRAPPED:
+		LOG_INF("LWM2M_CARRIER_EVENT_BOOTSTRAPPED");
+		break;
+	case LWM2M_CARRIER_EVENT_REGISTERED:
+		LOG_INF("LWM2M_CARRIER_EVENT_REGISTERED");
+		k_sem_give(&carrier_registered);
+		break;
+	case LWM2M_CARRIER_EVENT_DEFERRED:
+		LOG_INF("LWM2M_CARRIER_EVENT_DEFERRED");
+		break;
+	case LWM2M_CARRIER_EVENT_FOTA_START:
+		LOG_INF("LWM2M_CARRIER_EVENT_FOTA_START");
+		break;
+	case LWM2M_CARRIER_EVENT_REBOOT:
+		LOG_INF("LWM2M_CARRIER_EVENT_REBOOT");
+		break;
+	case LWM2M_CARRIER_EVENT_ERROR:
+		LOG_ERR("LWM2M_CARRIER_EVENT_ERROR: code %d, value %d",
+			((lwm2m_carrier_event_error_t *)event->data)->code,
+			((lwm2m_carrier_event_error_t *)event->data)->value);
+		break;
+	default:
+		LOG_WRN("Unhandled LWM2M_CARRIER_EVENT: %d", event->type);
+		break;
+	}
+
+	return 0;
+}
+#endif /* defined(CONFIG_LWM2M_CARRIER) */
+
+/**@brief Function to print strings without null-termination
+ */
+static void data_print(const char* prefix, uint8_t *data, size_t len)
+{
+	char buf[len + 1];
+
+	memcpy(buf, data, len);
+	buf[len] = 0;
+	LOG_INF("%s%s", log_strdup(prefix), log_strdup(buf));
+}
+
+/**@brief Function to publish data on the configured topic
+ */
+static int data_publish(struct mqtt_client *c, enum mqtt_qos qos,
+	uint8_t *data, size_t len, const char *topic)
+{
+	struct mqtt_publish_param param;
+
+	param.message.topic.qos = qos;
+	param.message.topic.topic.utf8 = (const uint8_t *)topic;
+	param.message.topic.topic.size = strlen(topic);
+	param.message.payload.data = data;
+	param.message.payload.len = len;
+	param.message_id = sys_rand32_get();
+	param.dup_flag = 0;
+	param.retain_flag = 0;
+
+	// data_print("Publishing: ", data, len);
+	// LOG_INF("to topic: %s len: %u",
+	// 	CONFIG_MQTT_PUB_TOPIC,
+	// 	(unsigned int)strlen(CONFIG_MQTT_PUB_TOPIC));
+
+	return mqtt_publish(c, &param);
+}
+
+/**@brief Function to subscribe to the configured topic
+ */
+static int subscribe(void)
+{
+	struct mqtt_topic subscribe_topic = {
+		.topic = {
+			.utf8 = (const uint8_t*)CONFIG_MQTT_SUB_TOPIC,
+			.size = strlen(CONFIG_MQTT_SUB_TOPIC)
+		},
+		.qos = MQTT_QOS_1_AT_LEAST_ONCE
+	};
+
+	const struct mqtt_subscription_list subscription_list = {
+		.list = &subscribe_topic,
+		.list_count = 1,
+		.message_id = 1234
+	};
+
+	LOG_INF("Subscribing to: %s len %u", CONFIG_MQTT_SUB_TOPIC,
+		(unsigned int)strlen(CONFIG_MQTT_SUB_TOPIC));
+
+	return mqtt_subscribe(&client, &subscription_list);
+}
+
+/**@brief Function to read the published payload.
+ */
+static int publish_get_payload(struct mqtt_client *c, size_t length)
+{
+	int ret;
+	int err = 0;
+
+	/* Return an error if the payload is larger than the payload buffer.
+	 * Note: To allow new messages, we have to read the payload before returning.
+	 */
+	if (length > sizeof(payload_buf)) {
+		err = -EMSGSIZE;
+	}
+
+	/* Truncate payload until it fits in the payload buffer. */
+	while (length > sizeof(payload_buf)) {
+		ret = mqtt_read_publish_payload_blocking(
+				c, payload_buf, (length - sizeof(payload_buf)));
+		if (ret == 0) {
+			return -EIO;
+		} else if (ret < 0) {
+			return ret;
+		}
+
+		length -= ret;
+	}
+
+	ret = mqtt_readall_publish_payload(c, payload_buf, length);
+	if (ret) {
+		return ret;
+	}
+
+	return err;
+}
+
+/**@brief MQTT client event handler
+ */
+void mqtt_evt_handler(struct mqtt_client *const c,
+		      const struct mqtt_evt *evt)
+{
+	int err;
+
+	switch (evt->type) {
+	case MQTT_EVT_CONNACK:
+		if (evt->result != 0) {
+			LOG_ERR("MQTT connect failed: %d", evt->result);
+			break;
+		}
+
+		LOG_INF("MQTT client connected");
+		mqttConnected = true;
+		// subscribe();
+		break;
+
+	case MQTT_EVT_DISCONNECT:
+		LOG_INF("MQTT client disconnected: %d", evt->result);
+		break;
+
+	case MQTT_EVT_PUBLISH: {
+		const struct mqtt_publish_param *p = &evt->param.publish;
+
+		LOG_INF("MQTT PUBLISH result=%d len=%d",
+			evt->result, p->message.payload.len);
+		err = publish_get_payload(c, p->message.payload.len);
+
+		if (p->message.topic.qos == MQTT_QOS_1_AT_LEAST_ONCE) {
+			const struct mqtt_puback_param ack = {
+				.message_id = p->message_id
+			};
+
+			/* Send acknowledgment. */
+			mqtt_publish_qos1_ack(&client, &ack);
+		}
+
+		if (err >= 0) {
+			data_print("Received: ", payload_buf,
+				p->message.payload.len);
+			/* Echo back received data */
+			data_publish(&client, MQTT_QOS_1_AT_LEAST_ONCE,
+				payload_buf, p->message.payload.len, CONFIG_MQTT_PUB_TOPIC);
+		} else if (err == -EMSGSIZE) {
+			LOG_ERR("Received payload (%d bytes) is larger than the payload buffer "
+				"size (%d bytes).",
+				p->message.payload.len, sizeof(payload_buf));
+		} else {
+			LOG_ERR("publish_get_payload failed: %d", err);
+			LOG_INF("Disconnecting MQTT client...");
+
+			err = mqtt_disconnect(c);
+			if (err) {
+				LOG_ERR("Could not disconnect: %d", err);
+			}
+		}
+	} break;
+
+	case MQTT_EVT_PUBACK:
+		if (evt->result != 0) {
+			LOG_ERR("MQTT PUBACK error: %d", evt->result);
+			break;
+		}
+
+		LOG_INF("PUBACK packet id: %u", evt->param.puback.message_id);
+		break;
+
+	case MQTT_EVT_SUBACK:
+		if (evt->result != 0) {
+			LOG_ERR("MQTT SUBACK error: %d", evt->result);
+			break;
+		}
+
+		LOG_INF("SUBACK packet id: %u", evt->param.suback.message_id);
+		break;
+
+	case MQTT_EVT_PINGRESP:
+		if (evt->result != 0) {
+			LOG_ERR("MQTT PINGRESP error: %d", evt->result);
+		}
+		break;
+
+	default:
+		LOG_INF("Unhandled MQTT event type: %d", evt->type);
+		break;
+	}
+}
+
+/**@brief Resolves the configured hostname and
+ * initializes the MQTT broker structure
+ */
+static int broker_init(string &url)
+{
+	int err;
+	struct addrinfo *result;
+	struct addrinfo *addr;
+	struct addrinfo hints = {
+		.ai_family = AF_INET,
+		.ai_socktype = SOCK_STREAM
+	};
+
+	err = getaddrinfo((const char *) url.c_str(), NULL, &hints, &result);
+	if (err) {
+		LOG_ERR("getaddrinfo failed: %d", err);
+		return -ECHILD;
+	}
+
+	addr = result;
+
+	/* Look for address of the broker. */
+	while (addr != NULL) {
+		/* IPv4 Address. */
+		if (addr->ai_addrlen == sizeof(struct sockaddr_in)) {
+			struct sockaddr_in *broker4 =
+				((struct sockaddr_in *)&broker);
+			char ipv4_addr[NET_IPV4_ADDR_LEN];
+
+			broker4->sin_addr.s_addr =
+				((struct sockaddr_in *)addr->ai_addr)
+				->sin_addr.s_addr;
+			broker4->sin_family = AF_INET;
+			broker4->sin_port = htons(CONFIG_MQTT_BROKER_PORT);
+
+			inet_ntop(AF_INET, &broker4->sin_addr.s_addr,
+				  ipv4_addr, sizeof(ipv4_addr));
+			LOG_INF("IPv4 Address found %s", log_strdup(ipv4_addr));
+
+			break;
+		} else {
+			LOG_ERR("ai_addrlen = %u should be %u or %u",
+				(unsigned int)addr->ai_addrlen,
+				(unsigned int)sizeof(struct sockaddr_in),
+				(unsigned int)sizeof(struct sockaddr_in6));
+		}
+
+		addr = addr->ai_next;
+	}
+
+	/* Free the address. */
+	freeaddrinfo(result);
+
+	return err;
+}
+
+#if defined(CONFIG_NRF_MODEM_LIB)
+#define IMEI_LEN 15
+#define CGSN_RESPONSE_LENGTH (IMEI_LEN + 6 + 1) /* Add 6 for \r\nOK\r\n and 1 for \0 */
+#define CLIENT_ID_LEN sizeof("nrf-") + IMEI_LEN
+#else
+#define RANDOM_LEN 10
+#define CLIENT_ID_LEN sizeof(CONFIG_BOARD) + 1 + RANDOM_LEN
+#endif /* defined(CONFIG_NRF_MODEM_LIB) */
+
+/* Function to get the client id */
+// static const uint8_t* client_id_get(void)
+// {
+// 	static uint8_t client_id[MAX(sizeof(CONFIG_MQTT_CLIENT_ID),
+// 				     CLIENT_ID_LEN)];
+
+// 	if (strlen(CONFIG_MQTT_CLIENT_ID) > 0) {
+// 		snprintf((char*)client_id, sizeof(client_id), "%s",
+// 			 CONFIG_MQTT_CLIENT_ID);
+// 		goto exit;
+// 	}
+
+// #if defined(CONFIG_NRF_MODEM_LIB)
+// 	char imei_buf[CGSN_RESPONSE_LENGTH + 1];
+// 	int err;
+
+// 	err = nrf_modem_at_cmd(imei_buf, sizeof(imei_buf), "AT+CGSN");
+// 	if (err) {
+// 		LOG_ERR("Failed to obtain IMEI, error: %d", err);
+// 		goto exit;
+// 	}
+
+// 	imei_buf[IMEI_LEN] = '\0';
+
+// 	snprintf((char *)client_id, sizeof(client_id), "nrf-%.*s", IMEI_LEN, imei_buf);
+// #else
+// 	uint32_t id = sys_rand32_get();
+// 	snprintf((char *)client_id, sizeof(client_id), "%s-%010u", CONFIG_BOARD, id);
+// #endif /* !defined(NRF_CLOUD_CLIENT_ID) */
+
+// exit:
+// 	LOG_DBG("client_id = %s", log_strdup((const char*)client_id));
+
+// 	return client_id;
+// }
+
+/**@brief Initialize the MQTT client structure
+ */
+static int client_init(string &url, string &id, struct mqtt_client *client)
+{
+	int err;
+
+	mqtt_client_init(client);
+
+	err = broker_init(url);
+	if (err) {
+		LOG_ERR("Failed to initialize broker connection");
+		return err;
+	}
+
+	/* MQTT client configuration */
+	client->broker = &broker;
+	client->evt_cb = mqtt_evt_handler;
+	client->client_id.utf8 = (uint8_t *) id.c_str();
+	client->client_id.size = strlen((const char*)client->client_id.utf8);
+	client->password = NULL;
+	client->user_name = NULL;
+	client->protocol_version = MQTT_VERSION_3_1_1;
+
+	/* MQTT buffers configuration */
+	client->rx_buf = rx_buffer;
+	client->rx_buf_size = sizeof(rx_buffer);
+	client->tx_buf = tx_buffer;
+	client->tx_buf_size = sizeof(tx_buffer);
+
+	/* MQTT transport configuration */
+#if defined(CONFIG_MQTT_LIB_TLS)
+	struct mqtt_sec_config *tls_cfg = &(client->transport).tls.config;
+	static sec_tag_t sec_tag_list[] = { CONFIG_MQTT_TLS_SEC_TAG };
+
+	LOG_INF("TLS enabled");
+	client->transport.type = MQTT_TRANSPORT_SECURE;
+
+	tls_cfg->peer_verify = CONFIG_MQTT_TLS_PEER_VERIFY;
+	tls_cfg->cipher_count = 0;
+	tls_cfg->cipher_list = NULL;
+	tls_cfg->sec_tag_count = ARRAY_SIZE(sec_tag_list);
+	tls_cfg->sec_tag_list = sec_tag_list;
+	tls_cfg->hostname =  (uint8_t *) url.c_str();
+
+#if defined(CONFIG_NRF_MODEM_LIB)
+	tls_cfg->session_cache = IS_ENABLED(CONFIG_MQTT_TLS_SESSION_CACHING) ?
+					    TLS_SESSION_CACHE_ENABLED :
+					    TLS_SESSION_CACHE_DISABLED;
+#else
+	/* TLS session caching is not supported by the Zephyr network stack */
+	tls_cfg->session_cache = TLS_SESSION_CACHE_DISABLED;
+
+#endif
+
+#else
+	client->transport.type = MQTT_TRANSPORT_NON_SECURE;
+#endif
+
+	return err;
+}
+
+/**@brief Initialize the file descriptor structure used by poll.
+ */
+static int fds_init(struct mqtt_client *c)
+{
+	if (c->transport.type == MQTT_TRANSPORT_NON_SECURE) {
+		fds.fd = c->transport.tcp.sock;
+	} else {
+#if defined(CONFIG_MQTT_LIB_TLS)
+		fds.fd = c->transport.tls.sock;
+#else
+		return -ENOTSUP;
+#endif
+	}
+
+	fds.events = POLLIN;
+
+	return 0;
+}
+
+#if defined(CONFIG_DK_LIBRARY)
+static void button_handler(uint32_t button_states, uint32_t has_changed)
+{
+	if (has_changed & button_states &
+	    BIT(CONFIG_BUTTON_EVENT_BTN_NUM - 1)) {
+		int ret;
+
+		ret = data_publish(&client,
+				   MQTT_QOS_1_AT_LEAST_ONCE,
+				   CONFIG_BUTTON_EVENT_PUBLISH_MSG,
+				   sizeof(CONFIG_BUTTON_EVENT_PUBLISH_MSG)-1, CONFIG_MQTT_PUB_TOPIC);
+		if (ret) {
+			LOG_ERR("Publish failed: %d", ret);
+		}
+	}
+}
+#endif
+
+bool Mqtt::connect(string &url, string &id)
+{
+	int err;
+	uint32_t connect_attempt = 0;
+
+	LOG_INF("The MQTT simple sample started");
+
+#if defined(CONFIG_MQTT_LIB_TLS)
+	err = certificates_provision();
+	if (err != 0) {
+		LOG_ERR("Failed to provision certificates");
+		return;
+	}
+#endif /* defined(CONFIG_MQTT_LIB_TLS) */
+
+	err = client_init(url, id, &client);
+	if (err != 0) {
+		LOG_ERR("client_init: %d", err);
+		return false;
+	}
+
+#if defined(CONFIG_DK_LIBRARY)
+	dk_buttons_init(button_handler);
+#endif
+
+do_connect:
+	if (connect_attempt++ > 0) {
+		LOG_INF("Reconnecting in %d seconds...",
+			CONFIG_MQTT_RECONNECT_DELAY_S);
+		k_sleep(K_SECONDS(CONFIG_MQTT_RECONNECT_DELAY_S));
+	}
+	err = mqtt_connect(&client);
+	if (err != 0) {
+		LOG_ERR("mqtt_connect %d", err);
+		goto do_connect;
+	}
+
+	err = fds_init(&client);
+	if (err != 0) {
+		LOG_ERR("fds_init: %d", err);
+		return false;
+	}
+	// while (!mqttConnected) {
+	// 	printk("wait....\n");
+	// 	k_msleep(1000);
+	// }
+
+	// connected = true;
+	// return true;
+
+	while (1) {
+		err = poll(&fds, 1, mqtt_keepalive_time_left(&client));
+		if (err < 0) {
+			LOG_ERR("poll: %d", errno);
+			break;
+		}
+
+		err = mqtt_live(&client);
+		if ((err != 0) && (err != -EAGAIN)) {
+			LOG_ERR("ERROR: mqtt_live: %d", err);
+			break;
+		}
+
+		if ((fds.revents & POLLIN) == POLLIN) {
+			err = mqtt_input(&client);
+			if (err != 0) {
+				LOG_ERR("mqtt_input: %d", err);
+				break;
+			}
+		}
+
+		if ((fds.revents & POLLERR) == POLLERR) {
+			LOG_ERR("POLLERR");
+			break;
+		}
+
+		if ((fds.revents & POLLNVAL) == POLLNVAL) {
+			LOG_ERR("POLLNVAL");
+			break;
+		}
+		if (mqttConnected) {
+			connected = true;
+			return true;
+		}
+	}
+
+	LOG_INF("Disconnecting MQTT client...");
+
+	err = mqtt_disconnect(&client);
+	if (err) {
+		LOG_ERR("Could not disconnect MQTT client: %d", err);
+	}
+	goto do_connect;
+}
+
+void Mqtt::publish(char *message)
+{
+	data_publish(&client, MQTT_QOS_0_AT_MOST_ONCE, (uint8_t*)message, strlen(message), topicPub.c_str());
+
+    // param.message.topic.topic.utf8 = (uint8_t *) topicPub.c_str();
+}
+
+void Mqtt::disconnect()
+{
+    int rc = mqtt_disconnect(&client);
+
+    printk("mqtt_disconnect: %d", rc);
+}
+
+void Mqtt::handlePubData(char *data)
+{
+    machine->handlePubData(data);
+}

@@ -1,7 +1,8 @@
 ﻿/*
- * Copyright (c) 2023 Peraton Labs
+ * Copyright (c) 2023-2024 Peraton Labs
  * SPDX-License-Identifier: Apache-2.0
- * @author tchen
+ * 
+ * Distribution Statement “A” (Approved for Public Release, Distribution Unlimited).
  */
 
 #pragma once
@@ -32,10 +33,6 @@ public:
 
     virtual uint32_t getTimestamp();
     virtual uint64_t getTimeInstant();
-
-    virtual uint32_t getHumidity(){ return 0; }
-
-    virtual uint32_t getTemperature(){ return 0; }
 
     virtual void sleepSec(uint32_t sec)
     {

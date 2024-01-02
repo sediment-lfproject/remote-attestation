@@ -1,7 +1,8 @@
 ﻿/*
- * Copyright (c) 2023 Peraton Labs
+ * Copyright (c) 2023-2024 Peraton Labs
  * SPDX-License-Identifier: Apache-2.0
- * @author tchen
+ * 
+ * Distribution Statement “A” (Approved for Public Release, Distribution Unlimited).
  */
 
 #include <iostream>
@@ -18,7 +19,6 @@
 #include "Seec.hpp"
 #include "Utils.hpp"
 #include "Verifier.hpp"
-#include "CryptoServer.hpp"
 
 using namespace std;
 
@@ -79,7 +79,8 @@ Message * Verifier::decodeMessage(uint8_t dataArray[], uint32_t len)
     return message;
 }
 
-Message * Verifier::handleMessage(Message *message, EndpointSock *src, Device *device, uint8_t *serialized,
+Message * Verifier::handleMessage(DeviceManager &deviceManager, Message *message, EndpointSock *src, Device *device,
+  uint8_t *serialized,
   uint32_t len)
 {
     // TODO
@@ -90,10 +91,10 @@ Message * Verifier::handleMessage(Message *message, EndpointSock *src, Device *d
 
     switch (id) {
     case ATTESTATION_REQUEST:
-        response = handleAttestationRequest((AttestationRequest *) message, src, device);
+        response = handleAttestationRequest(deviceManager, (AttestationRequest *) message, src, device);
         break;
     case EVIDENCE:
-        response = handleEvidence((Evidence *) message, src, device);
+        response = handleEvidence(deviceManager, (Evidence *) message, src, device);
         break;
     case PASSPORT_RESPONSE:
         response = handlePassportResponse((PassportResponse *) message, device);
@@ -128,7 +129,8 @@ void normalizeEvidenceTypes(vector<uint8_t> &types)
     }
 }
 
-Message * Verifier::handleAttestationRequest(AttestationRequest *attReq, EndpointSock *srcEp, Device *device)
+Message * Verifier::handleAttestationRequest(DeviceManager &deviceManager, AttestationRequest *attReq,
+  EndpointSock *srcEp, Device *device)
 {
     if (device == NULL) {
         SD_LOG(LOG_ERR, "null device");
@@ -136,7 +138,12 @@ Message * Verifier::handleAttestationRequest(AttestationRequest *attReq, Endpoin
     }
 
     uint32_t cp = attReq->getCounter();
-    uint32_t cv = stoi(device->getCol(COL_SQN));
+    string cv_str = deviceManager.getCol(device, COL_SQN);
+    if (cv_str.rfind("ERR", 0) == 0) {
+        SD_LOG(LOG_ERR, "failed to get sqn for %s", device->getId().c_str());
+        return NULL;
+    }
+    uint32_t cv = stoi(cv_str);
     if (cp <= cv) {
         SD_LOG(LOG_ERR, "out of date Attestation Request SQN: Cv=%d, Cp=%d", cv, cp);
         return NULL;
@@ -144,18 +151,19 @@ Message * Verifier::handleAttestationRequest(AttestationRequest *attReq, Endpoin
 
     Challenge *challenge = new Challenge();
     challenge->setDeviceID(attReq->getDeviceID());
-    challenge->setBlockSize(getFirmwareSize(getSedimentHome() + device->getFirmware()));
+    int blksize = (cli.getBlockSize() >= 0) ? cli.getBlockSize() : getFirmwareSize(getSedimentHome() + device->getFirmware());
+    challenge->setBlockSize(blksize);
     challenge->setBlockCount(1);
 
     vector<uint8_t> &types = device->getEvidenceTypes();
     normalizeEvidenceTypes(types);
     challenge->getEvidenceTypes().put(&types[0], types.size());
 
-    device->update(COL_SQN, to_string(cp));
+    deviceManager.update(device, COL_SQN, to_string(cp));
 
     int saved = srcEp->getPort();
     srcEp->setPort(attReq->getPort());
-    device->update(COL_PROVER_EP, "'" + srcEp->toStringOneline() + "'");
+    deviceManager.update(device, COL_PROVER_EP, srcEp->toStringOneline());
     srcEp->setPort(saved);
 
     challenge->setCounter(cp);
@@ -166,26 +174,22 @@ Message * Verifier::handleAttestationRequest(AttestationRequest *attReq, Endpoin
     return challenge;
 }
 
-Message * Verifier::handleEvidence(Evidence *evidence, EndpointSock *src, Device *device)
+Message * Verifier::handleEvidence(DeviceManager &deviceManager, Evidence *evidence, EndpointSock *src, Device *device)
 {
     if (device == NULL) {
         SD_LOG(LOG_ERR, "null device");
         return NULL;
     }
-
-    const time_t ts = (time_t) evidence->getTimestamp();
-    string tss      = asctime(localtime(&ts));
-    tss.pop_back();
-    statsFile << tss << ","
-              << ts << ","
-              << evidence->getDeviceID() << ","
-              << TO_MEAS_TYPE(evidence->getMeasurement().getType()) << ","
-              << evidence->getMeasurement().getElapsedTime() << ","
-              << evidence->getMeasurement().getOptional() << ","
-              << endl;
+    measurementLog.print(evidence->getTimestamp(), evidence->getDeviceID(), evidence->getMeasurement());
 
     string &deviceID = evidence->getDeviceID();
-    uint32_t counter = stoi(device->getCol(COL_SQN));
+
+    string cv_str = deviceManager.getCol(device, COL_SQN);
+    if (cv_str.rfind("ERR", 0) == 0) {
+        SD_LOG(LOG_ERR, "failed to get sqn for %s", device->getId().c_str());
+        return NULL;
+    }
+    uint32_t counter = stoi(cv_str);
     if (counter != evidence->getCounter()) {
         SD_LOG(LOG_ERR, "unexpected SQN: %d (Verifier) v.s. %d (Prover)", counter, evidence->getCounter());
         return NULL;
@@ -249,10 +253,10 @@ Message * Verifier::handleEvidence(Evidence *evidence, EndpointSock *src, Device
             verified = false;
         }
     }
-    device->update(COL_LAST_ATTESTATION, to_string(getTimestamp()));
-    device->update(COL_STATUS, to_string(verified));
+    deviceManager.update(device, COL_LAST_ATTESTATION, to_string(getTimestamp()));
+    deviceManager.update(device, COL_STATUS, to_string(verified));
 
-    sendAlert(verified ? PASS : FAILED_ATTEST, device->getId(), src);
+    sendAlert(deviceManager, verified ? PASS : FAILED_ATTEST, device->getId(), src);
 
     if (!verified) {
         SD_LOG(LOG_ERR, "device %s not verified", deviceID.c_str());
@@ -325,7 +329,7 @@ void Verifier::prepareGrant(Grant *grant)
     // sign the serialized passport
     uchar *sig  = NULL;
     size_t slen = 0;
-    cryptoServer.sign_it((const unsigned char *) data.at(0), size, &sig, &slen);
+    rsaSign.sign_it((const unsigned char *) data.at(0), size, &sig, &slen);
     // TODO: free sig
     signature.resize(slen);
     signature.put(sig, slen);
@@ -335,7 +339,7 @@ bool Verifier::verifyFullFirmware(EvidenceItem *item, Device *device, EvidenceTy
 {
     string filename = (type == EVIDENCE_UDF_LIB) ? "lib/sediment_udf.so" : device->getFirmware();
     filename = getSedimentHome() + filename;
-    int fileSize    = getFirmwareSize(filename);
+    int fileSize = (cli.getBlockSize() >= 0) ? cli.getBlockSize() : getFirmwareSize(filename);
 
     int fd = open(filename.c_str(), O_RDONLY);
     if (fd < 0) {
@@ -349,7 +353,10 @@ bool Verifier::verifyFullFirmware(EvidenceItem *item, Device *device, EvidenceTy
         close(fd);
         return false;
     }
-    return verifyHashing(item, device, type, bufPtr, fileSize, -1);
+    bool ok = verifyHashing(item, device, type, bufPtr, fileSize);
+    close(fd);
+
+    return ok;
 }
 
 bool Verifier::verifyConfigs(EvidenceItem *item, Device *device, EvidenceType type)
@@ -357,20 +364,20 @@ bool Verifier::verifyConfigs(EvidenceItem *item, Device *device, EvidenceType ty
     string filename = getSedimentHome() + device->getConfigs();
     int fileSize;
 
-    char *gatherConfigBlocks(const string &filename, int *size, int **report_interval);
+    char * gatherConfigBlocks(const string &filename, int *size, int **report_interval);
     int *dummy;
     unsigned char *bufPtr = (unsigned char *) gatherConfigBlocks(filename, &fileSize, &dummy);
     if (bufPtr == 0) {
         SD_LOG(LOG_ERR, "config error: %s", filename.c_str());
         return false;
     }
-    bool val = verifyHashing(item, device, type, bufPtr, fileSize, -1);
+    bool val = verifyHashing(item, device, type, bufPtr, fileSize);
     free(bufPtr);
 
     return val;
 }
 
-bool Verifier::verifyHashing(EvidenceItem *item, Device *device, EvidenceType type, unsigned char *bufPtr, int fileSize, int fd)
+bool Verifier::verifyHashing(EvidenceItem *item, Device *device, EvidenceType type, unsigned char *bufPtr, int fileSize)
 {
     EvidenceEncoding encoding = item->getEncoding();
     if (encoding != ENCODING_HMAC_SHA256) {
@@ -389,8 +396,6 @@ bool Verifier::verifyHashing(EvidenceItem *item, Device *device, EvidenceType ty
     Crypto *crypto = seec->getCrypto();
     if (crypto == NULL) {
         SD_LOG(LOG_ERR, "null crypto: %s");
-        if (fd > 0)
-            close(fd);
         return false;
     }
     crypto->checksum(KEY_ATTESTATION, blocks, sizeof(blocks) / sizeof(Block), digest, Crypto::FW_DIGEST_LEN);
@@ -400,12 +405,8 @@ bool Verifier::verifyHashing(EvidenceItem *item, Device *device, EvidenceType ty
     if (memcpy_resp != 0) {
         SD_LOG(LOG_ERR, "%s checksum is incorrect", Log::toEvidencetype(type).c_str());
         SD_LOG(LOG_INFO, "Expected: %s", Log::toHex((char *) digest, vecEvidence.size()).c_str());
-        if (fd > 0)
-            close(fd);
         return false;
     }
-    if (fd > 0)
-        close(fd);
     SD_LOG(LOG_INFO, "%s checksum is correct", Log::toEvidencetype(type).c_str());
 
     return true;
@@ -514,6 +515,15 @@ void * Verifier::serviceControl(void *p)
     return NULL;
 }
 
+void * Verifier::guiServiceControl(void *p)
+{
+    Verifier *verifier = (Verifier *) p;
+
+    verifier->runGuiService();
+
+    return NULL;
+}
+
 string Verifier::receiveDeviceID(int ctrl_sock)
 {
     const int SERIAL_SIZE = 64;
@@ -536,23 +546,24 @@ string Verifier::receiveDeviceID(int ctrl_sock)
 
 void Verifier::runService()
 {
-    int cport = aService->getPort();
+    DeviceManager deviceManager(dbType, dbName);
 
     int service_sock;
     struct sockaddr_in client;
 
-    int server_fd = Comm::setup(cport);
+    int server_fd = Comm::setup(cli.getApiPort());
 
     if (server_fd < 0) {
-        SD_LOG(LOG_ERR, "control: socket cannot be created.");
+        SD_LOG(LOG_ERR, "API: socket cannot be created at port %d.", cli.getApiPort());
         return;
     }
 
+    SD_LOG(LOG_INFO, "API service at port %d", cli.getApiPort());
     while (1) {
         socklen_t client_len = sizeof(client);
         service_sock = accept(server_fd, (struct sockaddr *) &client, &client_len);
         if (service_sock == -1) {
-            SD_LOG(LOG_ERR, "control: accept error");
+            SD_LOG(LOG_ERR, "api: accept error");
             continue;
         }
 
@@ -563,14 +574,24 @@ void Verifier::runService()
         string type    = line.substr(0, space);
         if (!type.compare("ip")) {
             string addr = line.substr(space + 1);
-            string ep   = "TCP:" + addr + ":8899";
-            device = Device::findDeviceByIP(ep);
+            string ep   = "tcp:" + addr + ":8899";
+            device = deviceManager.findDeviceByIP(ep);
+
+            char msg[128];
+            int bytes;
+            if (device != NULL) {
+                bytes = snprintf(msg, 128, "%d %d", device->getLastAttestation(), (int)device->getStatus());
+            }
+            else {
+                bytes = snprintf(msg, 128, "0 -1");
+            }
+            send(service_sock, (const char *) msg, bytes, MSG_NOSIGNAL);
         }
         else if (!type.compare("id")) {
             int secondSpace = line.substr(space + 1).find(" ") + type.length();
             string deviceID = line.substr(space + 1, secondSpace - space);
-            device = Device::findDevice(deviceID);
-            sendAlert(Reason::REQUESTED, deviceID, NULL);
+            device = deviceManager.findDevice(deviceID);
+            sendAlert(deviceManager, Reason::REQUESTED, deviceID, NULL);
         }
 
         if (device == NULL) {
@@ -582,10 +603,36 @@ void Verifier::runService()
         close(service_sock);
     }
     close(server_fd);
-    SD_LOG(LOG_DEBUG, "control: server closed");
+    SD_LOG(LOG_DEBUG, "api: server closed");
 }
 
-void Verifier::sendAlert(Reason reason, string deviceID, EndpointSock *src)
+static vector<int> guiClients;
+void Verifier::runGuiService()
+{
+    int service_sock;
+    struct sockaddr_in client;
+
+    int server_fd = Comm::setup(cli.getGuiPort());
+    if (server_fd < 0) {
+        SD_LOG(LOG_ERR, "GUI: socket cannot be created at port %d.", cli.getGuiPort());
+        return;
+    }
+
+    SD_LOG(LOG_INFO, "GUI service at port %d", cli.getGuiPort());
+    while (1) {
+        socklen_t client_len = sizeof(client);
+        service_sock = accept(server_fd, (struct sockaddr *) &client, &client_len);
+        if (service_sock == -1) {
+            SD_LOG(LOG_ERR, "gui: accept error");
+            continue;
+        }
+        guiClients.push_back(service_sock);
+    }
+    close(server_fd);
+    SD_LOG(LOG_DEBUG, "gui: server closed");
+}
+
+void Verifier::sendAlert(DeviceManager &deviceManager, Reason reason, string deviceID, EndpointSock *src)
 {
     Alert alert;
 
@@ -609,7 +656,7 @@ void Verifier::sendAlert(Reason reason, string deviceID, EndpointSock *src)
 
     uchar *sig  = NULL;
     size_t slen = 0;
-    cryptoServer.sign_it((const unsigned char *) &result[excluded], total, &sig, &slen);
+    rsaSign.sign_it((const unsigned char *) &result[excluded], total, &sig, &slen);
     // TODO: free sig
     signature.resize(slen);
     signature.put(sig, slen);
@@ -621,7 +668,7 @@ void Verifier::sendAlert(Reason reason, string deviceID, EndpointSock *src)
         SD_LOG(LOG_WARNING, "alert not sent");
     }
     else {
-        finalizeAndSend(alert_sock, &alert);
+        finalizeAndSend(deviceManager, alert_sock, &alert);
         close(alert_sock);
         SD_LOG(LOG_DEBUG, "sent alert.........");
     }
@@ -629,23 +676,29 @@ void Verifier::sendAlert(Reason reason, string deviceID, EndpointSock *src)
 
 void Verifier::publish(Evidence *evidence, bool verified)
 {
-    if (noGUI)
-        return;
-        
-    int pub_sock = Comm::connectTcp(guiEndpoint);
-
-    if (pub_sock < 0) {
-        SD_LOG(LOG_WARNING, "verification result not published");
-        return;
-    }
     string &deviceID = evidence->getDeviceID();
-
-    char rsp[64];
     int us = evidence->getMeasurement().getElapsedTime();
-    sprintf(rsp, "%s,%s,%1.6f", deviceID.c_str(), verified ? "correct" : "incorrect", us / (double) 1e6);
-    send(pub_sock, (const char *) rsp, strlen(rsp), 0);
 
-    close(pub_sock);
+    const int offset = 6;
+    string pub = deviceID + "," + (verified ? "correct" : "incorrect") + "," + to_string(us / (double) 1e6);
+    string message(offset + pub.length(), 'x');
+    snprintf((char*)&message[0], (int) (pub.length() - 1), "%05d,", (int)pub.length());
+    std::copy((char *)&pub[0], (char *)&pub[0] + pub.length(), message.begin() + offset);
 
-    Log::plain(COLOR_NONE, "publish %s", rsp);
+    char *rsp = (char *) &message[0];
+    int rsp_len = message.length();
+
+    for (vector<int>::iterator iter = guiClients.begin(); iter != guiClients.end(); ) {
+        int pub_sock = *iter;
+
+        int val = send(pub_sock, (const char *) rsp, rsp_len, MSG_NOSIGNAL);
+        if (val < 0) {
+            iter = guiClients.erase(iter);
+            SD_LOG(LOG_WARNING, "gui socket closed: %d", pub_sock);
+            close(pub_sock);
+        }
+        else
+            iter++;
+    }
+    SD_LOG(LOG_DEBUG, "publish %s", rsp);
 }

@@ -1,7 +1,8 @@
 ﻿/*
- * Copyright (c) 2023 Peraton Labs
+ * Copyright (c) 2023-2024 Peraton Labs
  * SPDX-License-Identifier: Apache-2.0
- * @author tchen
+ * 
+ * Distribution Statement “A” (Approved for Public Release, Distribution Unlimited).
  */
 
 #include "Seec.hpp"
@@ -83,6 +84,58 @@ void Seec::decryptKey(KeyBox &keyBox)
         break;
     case KEY_ENC_TYPE_RSA:
         rsa.decryptKey(keyBox);
+        break;
+    default:
+        SD_LOG(LOG_ERR, "unsupported key encryption type: %s", TO_KEY_ENC_TYPE(keyEncType).c_str());
+        break;
+    }
+}
+
+void Seec::revocation(Vector &payload)
+{
+    KeyEncType keyEncType = config.getKeyDistMethod();
+
+    switch(keyEncType) {
+    case KEY_ENC_TYPE_JEDI:
+        jedi.revocation(payload);
+        break;
+    case KEY_ENC_TYPE_RSA:
+        SD_LOG(LOG_ERR, "revocation not supported for RSA!");
+        break;
+    default:
+        SD_LOG(LOG_ERR, "unsupported key encryption type: %s", TO_KEY_ENC_TYPE(keyEncType).c_str());
+        break;
+    }
+}
+
+void Seec::revocationCheck(Vector &iv, Vector &payload, int message_size, MeasurementList &measList, Board *board,
+                       string &deviceID, Crypto *crypto, char *plaintext)
+{
+    KeyEncType keyEncType = config.getKeyDistMethod();
+
+    switch(keyEncType) {
+    case KEY_ENC_TYPE_JEDI:
+        jedi.revocationCheck(iv, payload, message_size, measList, board, deviceID, crypto, plaintext);
+        break;
+    case KEY_ENC_TYPE_RSA:
+        SD_LOG(LOG_ERR, "revocation check not supported for RSA!");
+        break;
+    default:
+        SD_LOG(LOG_ERR, "unsupported key encryption type: %s", TO_KEY_ENC_TYPE(keyEncType).c_str());
+        break;
+    }
+}
+
+void Seec::revocationAck(Vector &iv, Vector &payload, Board *board, MeasurementList &measList, uint32_t &revAckSqn)
+{
+    KeyEncType keyEncType = config.getKeyDistMethod();
+
+    switch(keyEncType) {
+    case KEY_ENC_TYPE_JEDI:
+        jedi.revocationAck(iv, payload, board, measList, revAckSqn);
+        break;
+    case KEY_ENC_TYPE_RSA:
+        SD_LOG(LOG_ERR, "revocation ack not supported for RSA!");
         break;
     default:
         SD_LOG(LOG_ERR, "unsupported key encryption type: %s", TO_KEY_ENC_TYPE(keyEncType).c_str());

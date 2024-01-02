@@ -1,7 +1,8 @@
 ﻿/*
- * Copyright (c) 2023 Peraton Labs
+ * Copyright (c) 2023-2024 Peraton Labs
  * SPDX-License-Identifier: Apache-2.0
- * @author tchen
+ * 
+ * Distribution Statement “A” (Approved for Public Release, Distribution Unlimited).
  */
 
 #include "iostream"
@@ -247,16 +248,12 @@ void Passport::encode(Vector &data)
 void Grant::decode(Vector &data)
 {
     Message::decode(data);
-
-    passportLen = Codec::getInt(data, PASSPORT_LEN);
     passport.decode(data);
 }
 
 void Grant::encode(Vector &data)
 {
     Message::encode(data);
-
-    Codec::putInt(passportLen, data, PASSPORT_LEN);
     passport.encode(data);
 }
 
@@ -390,4 +387,26 @@ void Alert::encode(Vector &data)
 
     Codec::putInt(signature.size(), data, SIGNATURE_LEN_LEN);
     Codec::putByteArray(data, signature);
+}
+
+void Revocation::decode(Vector &data)
+{
+    Message::decode(data);
+
+    int payload_size = Codec::getInt(data, PAYLOAD_SIZE_LEN);
+    Codec::getByteArray(data, payload_size, payload);
+
+    int checksum_size = Codec::getInt(data, DATA_CHECKSUM_LEN);
+    Codec::getByteArray(data, checksum_size, checksum);
+}
+
+void Revocation::encode(Vector &data)
+{
+    Message::encode(data);
+
+    Codec::putInt(payload.size(), data, PAYLOAD_SIZE_LEN);
+    Codec::putByteArray(data, payload);
+
+    Codec::putInt(checksum.size(), data, DATA_CHECKSUM_LEN);
+    Codec::putByteArray(data, checksum);
 }

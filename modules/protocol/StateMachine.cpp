@@ -1,7 +1,8 @@
 ﻿/*
- * Copyright (c) 2023 Peraton Labs
+ * Copyright (c) 2023-2024 Peraton Labs
  * SPDX-License-Identifier: Apache-2.0
- * @author tchen
+ * 
+ * Distribution Statement “A” (Approved for Public Release, Distribution Unlimited).
  */
 
 #include "sediment.h"
@@ -22,7 +23,7 @@ bool StateMachine::sendMessage(int peer_sock, MessageID messageID, uint8_t *seri
         return false;
     }
     if (config.getTransport() == TRANSPORT_SEDIMENT_MQTT &&
-      messageID == DATA)
+      (messageID == DATA || messageID == REVOCATION))
     {
         string pub = Log::toHexNoLimit((char *) serialized, msg_len);
         mqtt.publish((char *) &pub[0]);
@@ -44,28 +45,6 @@ bool StateMachine::sendMessage(int peer_sock, MessageID messageID, uint8_t *seri
         }
     }
     return true;
-}
-
-void StateMachine::finalizeAndSend(int peer_sock, Message *message)
-{
-    setTimestamp(message);
-    AuthToken &authToken = message->getAuthToken();
-
-    uint32_t msg_len;
-    uint8_t *serialized = message->serialize(&msg_len);
-
-    calAuthToken(message, serialized, msg_len);
-
-    uint32_t size = authToken.getSize();
-    Vector data(size);
-    authToken.encode(data);
-
-    memcpy(serialized + AUTH_TOKEN_OFFSET, (char *) data.at(0), authToken.getSize());
-
-    sendMessage(peer_sock, message->getId(), serialized, msg_len);
-    free(serialized);
-
-    SD_LOG(LOG_DEBUG, "sent (%d).........%s", msg_len, message->toString().c_str());
 }
 
 bool StateMachine::isWellFormed(uint8_t dataArray[], uint32_t len)

@@ -1,10 +1,11 @@
 /*
- * Copyright (c) 2023 Peraton Labs
+ * Copyright (c) 2023-2024 Peraton Labs
  * SPDX-License-Identifier: Apache-2.0
+ *
+ * Distribution Statement “A” (Approved for Public Release, Distribution Unlimited).
  */
-
 #include <logging/log.h>
-LOG_MODULE_REGISTER(net_echo_server_sample, LOG_LEVEL_DBG);
+LOG_MODULE_REGISTER(_, LOG_LEVEL_DBG);
 
 #include <zephyr.h>
 #include <linker/sections.h>

@@ -1,7 +1,8 @@
 ﻿/*
- * Copyright (c) 2023 Peraton Labs
+ * Copyright (c) 2023-2024 Peraton Labs
  * SPDX-License-Identifier: Apache-2.0
- * @author tchen
+ * 
+ * Distribution Statement “A” (Approved for Public Release, Distribution Unlimited).
  */
 
 #pragma once
@@ -19,14 +20,16 @@ class Mqtt
 private:
     string topicPub;
     string topicSub;
+    string topicRev;
     StateMachine *machine = NULL;
     bool connected = false;
 
 public:
-    Mqtt(const string &pub, const string &sub, StateMachine *machine)
+    Mqtt(const string &pub, const string &sub, const string &rev, StateMachine *machine)
     {
         topicPub = pub;
         topicSub = sub;
+        topicRev = rev;
         this->machine = machine;
     }
 
@@ -35,14 +38,20 @@ public:
     void disconnect();
     void handlePubData(char *data);
 
-    string &getTopicSub()
-    {
+    string &getTopicSub() {
         return topicSub;
     }
 
-    string &getTopicPub()
-    {
+    string &getTopicPub() {
         return topicPub;
+    }
+
+    void setTopicPub(const string &topicPub) {
+        this->topicPub = topicPub;
+    }
+
+    string &getTopicRev() {
+        return topicRev;
     }
 
     bool isConnected() {

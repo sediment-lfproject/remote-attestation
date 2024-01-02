@@ -1,0 +1,23 @@
+firewall id:RA_Manager
+firewall incoming:tcp:127.0.0.1:8000
+firewall outgoing:tcp:127.0.0.1:8001
+
+enc_enabled true
+auth_enabled true
+attest_enabled true
+seec_enabled true
+sign_enabled true
+log_level 8
+
+report_interval 5
+passport_period 86400
+payload_size 48
+fixed_delay -1
+pass_thru_enabled true
+num_cycles 5
+iterations 10
+transport sediment
+download true
+mqtt_url 127.0.0.1
+fwScript /home/tchen/sediment/utils/install_rule.sh
+

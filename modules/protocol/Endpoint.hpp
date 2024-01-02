@@ -1,7 +1,8 @@
 ﻿/*
- * Copyright (c) 2023 Peraton Labs
+ * Copyright (c) 2023-2024 Peraton Labs
  * SPDX-License-Identifier: Apache-2.0
- * @author tchen
+ * 
+ * Distribution Statement “A” (Approved for Public Release, Distribution Unlimited).
  */
 
 #pragma once
@@ -10,6 +11,7 @@
 
 #include "Enum.hpp"
 #include "Codec.hpp"
+#include "Log.hpp"
 
 #define PROTOCOL_LEN 1
 #define ADDRESS_LEN  1

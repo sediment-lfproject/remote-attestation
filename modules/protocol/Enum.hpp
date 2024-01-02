@@ -1,7 +1,8 @@
 ﻿/*
- * Copyright (c) 2023 Peraton Labs
+ * Copyright (c) 2023-2024 Peraton Labs
  * SPDX-License-Identifier: Apache-2.0
- * @author tchen
+ * 
+ * Distribution Statement “A” (Approved for Public Release, Distribution Unlimited).
  */
 
 #pragma once
@@ -35,7 +36,11 @@ enum MessageID {
 
     CONFIG              = 14,
 
-    MAX_MSG_ID          = 15,
+    REVOCATION          = 15,   // Used to inform Subscribers of Subscriber Revocation(s)
+    REVOCATION_CHECK    = 16,   // Used by Publishers to check for Subscriber Revocation(s) before publishing
+    REVOCATION_ACK      = 17,   // Response to Publishers, informing about Subscriber Revocation(s)
+
+    MAX_MSG_ID          = 18,
 };
 
 enum Reason {
@@ -157,31 +162,39 @@ enum KeyPurpose {
 };
 
 enum MeasurementType {
-    MIN_MEASUREMENT             = -1,
+    MIN_MEASUREMENT                 = -1,
 
-    MEAS_AES_ENCRYPTION         = 0,
-    MEAS_ATTESTATION            = 1,
-    MEAS_HMAC_SIGNING           = 2,
+    MEAS_AES_ENCRYPTION             = 0,
+    MEAS_ATTESTATION                = 1,
+    MEAS_HMAC_SIGNING               = 2,
 
-    MEAS_RSA_SIGNING            = 3,
-    MEAS_RSA_VERIFYING          = 4,
-    MEAS_RSA_ENCRYPTION         = 5,
+    MEAS_RSA_SIGNING                = 3,
+    MEAS_RSA_VERIFYING              = 4,
+    MEAS_RSA_ENCRYPTION             = 5,
 
-    MEAS_JEDI_ENCRYPT           = 6,
-    MEAS_JEDI_SETUP             = 7,
-    MEAS_JEDI_KEYGEN            = 8,
-    MEAS_JEDI_PRECOMPUTE        = 9,
-    MEAS_JEDI_SIGN              = 10,
-    MEAS_JEDI_QUALIFY_KEY       = 11,
-    MEAS_JEDI_ADJUST_PRECOMPUTE = 12,
+    MEAS_JEDI_ENCRYPT               = 6,
+    MEAS_JEDI_SETUP                 = 7,
+    MEAS_JEDI_KEYGEN                = 8,
+    MEAS_JEDI_PRECOMPUTE            = 9,
+    MEAS_JEDI_SIGN                  = 10,
+    MEAS_JEDI_QUALIFY_KEY           = 11,
+    MEAS_JEDI_ADJUST_PRECOMPUTE     = 12,
 
-    MEAS_PLAINTEXT_COPY         = 13,
-    MEAS_WKD_INIT               = 14,
-    MEAS_CYCLE_INIT             = 15,
-    MEAS_REGENERATE_STATE       = 16,
-    MEAS_PUB_AUTH               = 17,
+    MEAS_PLAINTEXT_COPY             = 13,
+    MEAS_WKD_INIT                   = 14,
+    MEAS_CYCLE_INIT                 = 15,
+    MEAS_REGENERATE_STATE           = 16,
+    MEAS_PUB_AUTH                   = 17,
 
-    MAX_MEASUREMENT             = 18,
+    MEAS_REV_AES_ENCRYPTION         = 18,
+    MEAS_REV_AES_DECRYPTION         = 19,
+    MEAS_REV_CYCLE_INIT             = 20,
+    MEAS_REV_JEDI_ADJUST_PRECOMPUTE = 21,
+    MEAS_REV_JEDI_ENCRYPT           = 22,
+    MEAS_REV_JEDI_QUALIFY_KEY       = 23,
+    MEAS_REV_JEDI_SIGN              = 24,
+
+    MAX_MEASUREMENT                 = 25,
 };
 
 enum DataTransport {

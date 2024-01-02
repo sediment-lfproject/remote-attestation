@@ -1,7 +1,8 @@
 ﻿/*
- * Copyright (c) 2023 Peraton Labs
+ * Copyright (c) 2023-2024 Peraton Labs
  * SPDX-License-Identifier: Apache-2.0
- * @author tchen
+ * 
+ * Distribution Statement “A” (Approved for Public Release, Distribution Unlimited).
  */
 
 #pragma once
@@ -18,19 +19,21 @@ protected:
     static const int MAX_REJECT         = 5;    // # of consecutive rejected data messages
     static const int MAX_ATTEST_RESTART = 5;    // # of times the procedure can restart at AR
 
-
     Passport passport;    // passport received from the verifier
     Reason reason = INIT; // reason for starting attestation
 
-    Endpoint rpEndpoint; // saved relying party endpoint
+    Endpoint rpEndpoint;  // saved relying party endpoint
+    Endpoint revEndpoint; // saved Revocation Server endpoint
     MessageID expecting = CONFIG;
-    Cause cause = CAUSE_POWER_ON;
+    Cause cause         = CAUSE_POWER_ON;
     int mySock = -1;
 
     uint32_t rejectCount    = 0; // consecutive times of data being rejected
     uint32_t attestSqn      = 1; // current attestation sequence number
     uint32_t attestRestarts = 0; // amount of restarts from AR
-    uint32_t seecSqn        = 0; // current seec number
+    uint32_t seecSqn        = 0; // current seec sequence number
+    uint32_t revCheckSqn    = 0; // current revocation check sequence number
+    uint32_t revAckSqn      = 0; // current revocation ack sequence number
 
     Seec seec;
 
@@ -39,6 +42,8 @@ protected:
 
     bool moveTo(MessageID id, Message *received);
     bool handleMessage(Message *message);
+
+    void finalizeAndSend(int peer_sock, Message *message);
 
     Message * prepareConfig(Message *received);
     bool handleConfig(Message *received);
@@ -52,6 +57,8 @@ protected:
     Message * preparePassportCheck(Message *received);
     bool handlePermission(Message *message);
     Message * prepareKeyChange(Message *received);
+    Message * prepareRevocationCheck(Message *received);
+    bool handleRevocationAck(Message *received);
     Message * prepareData(Message *received);
     bool handleResult(Message *message);
 
@@ -65,9 +72,9 @@ protected:
     bool preapreEvidenceOsVersion(Challenge *challenge, EvidenceItem *item);
     bool prepareEvidenceFullFirmware(Challenge *challenge, EvidenceItem *item, uint32_t *elapsed, int *optional);
     bool prepareEvidenceConfigs(Challenge *challenge, EvidenceItem *item, uint32_t *elapsed, int *optional);
-    
-    bool prepareEvidenceHashing(Challenge *challenge, EvidenceItem *item, uint32_t *elapsed, 
-                                int *optional, EvidenceType evidenceType, const uint8_t *starting, uint32_t blockSize);
+
+    bool prepareEvidenceHashing(Challenge *challenge, EvidenceItem *item, uint32_t *elapsed,
+      int *optional, EvidenceType evidenceType, const uint8_t *starting, uint32_t blockSize);
 
 #ifdef PLATFORM_RPI
     string sediment_home;
@@ -84,21 +91,24 @@ protected:
 
     void transit(MessageID state, Cause cause) {
         this->expecting = state;
-        this->cause = cause;
+        this->cause     = cause;
     }
 
 public:
+    static bool suspend;
+
     Prover(Config &config, Board *board)
         : StateMachine(config, board),
         seec(config)
     {
 #ifdef PLATFORM_RPI
-        // The following are not necessary for non-Linux based devices 
+        // The following are not necessary for non-Linux based devices
         // since they load configurations from the flash after the prover
         // is constructed and overrides what's done here.
-        
+
         this->endpoint.copy(*config.getComponent().getOutgoing());
         this->rpEndpoint.copy(endpoint);
+        this->revEndpoint.copy(*config.getComponent().getRevServer());
 
         Crypto *crypto = seec.getCrypto();
 
@@ -110,9 +120,14 @@ public:
 
         vector<uint8_t> &auth_key = config.getAuthKey();
         crypto->changeKey(KEY_AUTH, (unsigned char *) &auth_key[0], auth_key.size());
-#endif
+#endif // ifdef PLATFORM_RPI
         if (!config.isAttestationEnabled()) {
+#ifdef SEEC_ENABLED
+            expecting = REVOCATION_CHECK;
+#else
             expecting = DATA;
+#endif
+
         }
     }
 
@@ -136,6 +151,18 @@ public:
         rpEndpoint.setPort(port);
     }
 
+    // invoked when Revocation endpoint is loaded from flash
+    void reInitRevEndpoint(Protocol protocol, string addr, int port)
+    {
+        revEndpoint.setProtocol(protocol);
+        revEndpoint.setAddress(addr);
+        revEndpoint.setPort(port);
+    }
+
+    void setTopicPub(const string &topicPub) {
+        mqtt.setTopicPub(topicPub);
+    }
+
 #ifdef PLATFORM_RPI
     const string& getSedimentHome() const
     {
@@ -146,5 +173,5 @@ public:
     {
         sediment_home = home;
     }
-#endif    
+#endif // ifdef PLATFORM_RPI
 };

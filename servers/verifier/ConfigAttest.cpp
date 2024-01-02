@@ -1,7 +1,8 @@
 ﻿/*
- * Copyright (c) 2023 Peraton Labs
+ * Copyright (c) 2023-2024 Peraton Labs
  * SPDX-License-Identifier: Apache-2.0
- * @author tchen
+ * 
+ * Distribution Statement “A” (Approved for Public Release, Distribution Unlimited).
  */
 
 #include <iostream>
@@ -17,6 +18,7 @@
 
 using std::filesystem::exists;
 
+#if 0
 void dump(const uint8_t *data, int num_items)
 {
     int offset = 0;
@@ -74,18 +76,26 @@ void dump_hex_ascii(const uint8_t *data, size_t size)
     }
     printf("\n");
 }
+#endif
 
 bool isMultiline(string key)
 {
     return !(key.compare(NV_PARAMS) &&
            key.compare(NV_ENCRYPTKEY) &&
            key.compare(NV_SIGNKEY) &&
-           key.compare(NV_URIPATH) &&
+           key.compare(NV_REVKEY) &&
+           key.compare(NV_EURIPATH) &&
+           key.compare(NV_SURIPATH) &&
+           key.compare(NV_RURIPATH) &&
            key.compare(NV_TIMEPATH));
 }
 
 char *gatherConfigBlocks(const string &filename, int *size, int **report_interval)
 {
+    (void) filename;
+    (void) size;
+    (void) report_interval;
+#if 0
     if (!exists(filename)) {
         SD_LOG(LOG_ERR, "file not exists: '%s'", filename.c_str());
         exit(1);
@@ -185,4 +195,6 @@ char *gatherConfigBlocks(const string &filename, int *size, int **report_interva
     // dump_hex_ascii((const uint8_t *)pool, total);
 
     return pool;
+#endif
+    return NULL;    
 }

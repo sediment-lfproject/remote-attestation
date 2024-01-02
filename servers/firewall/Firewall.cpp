@@ -1,7 +1,8 @@
 ﻿/*
- * Copyright (c) 2023 Peraton Labs
+ * Copyright (c) 2023-2024 Peraton Labs
  * SPDX-License-Identifier: Apache-2.0
- * @author tchen
+ * 
+ * Distribution Statement “A” (Approved for Public Release, Distribution Unlimited).
  */
 
 #include <unistd.h>
@@ -9,11 +10,9 @@
 
 #include "Device.hpp"
 #include "Log.hpp"
-#include "CryptoServer.hpp"
 #include "Comm.hpp"
 #include "Message.hpp"
 #include "Config.hpp"
-#include "CryptoServer.hpp"
 #include "Firewall.hpp"
 
 using namespace std;
@@ -63,7 +62,8 @@ Message * Firewall::decodeMessage(uint8_t dataArray[], uint32_t len)
     return message;
 }
 
-Message * Firewall::handleMessage(Message *message, EndpointSock *src, Device *device, uint8_t *serialized,
+Message * Firewall::handleMessage(DeviceManager &deviceManager, Message *message, EndpointSock *src, Device *device,
+  uint8_t *serialized,
   uint32_t len)
 {
     (void) src;
@@ -76,10 +76,10 @@ Message * Firewall::handleMessage(Message *message, EndpointSock *src, Device *d
         response = handleConfigMessage((ConfigMessage *) message, device);
         break;
     case PASSPORT_REQUEST:
-        response = handlePassportRequest((PassportRequest *) message, device);
+        response = handlePassportRequest(deviceManager, (PassportRequest *) message, device);
         break;
     case PASSPORT_CHECK:
-        response = handlePassportCheck((PassportCheck *) message, device);
+        response = handlePassportCheck(deviceManager, (PassportCheck *) message, device);
         break;
     case DATA:
         response = handleData((Data *) message, device, serialized, len);
@@ -172,7 +172,7 @@ Message * Firewall::handleAlert(Alert *alert, Device *device)
     }
     int excluded = alert->getSigCoverage(signature, &total);
 
-    int rc = cryptoServer.verify_it((const uchar *) &result[excluded], total, (uchar *) signature.at(0), slen);
+    int rc = rsaVerify.verify_it((const uchar *) &result[excluded], total, (uchar *) signature.at(0), slen);
     free(result);
 
     if (rc != 0) {
@@ -226,7 +226,8 @@ Message * Firewall::handleKeyChange(KeyChange *keyChange, Device *device, uint8_
     return NULL;
 }
 
-Message * Firewall::handlePassportRequest(PassportRequest *passportRequest, Device *device)
+Message * Firewall::handlePassportRequest(DeviceManager &deviceManager, PassportRequest *passportRequest,
+  Device *device)
 {
     if (device == NULL) {
         SD_LOG(LOG_ERR, "null device");
@@ -252,7 +253,7 @@ Message * Firewall::handlePassportRequest(PassportRequest *passportRequest, Devi
         seec->encryptKey(keyBox, board, passportResponse->getMeasurementList(), deviceID);
         seec->setLastChangeKey(getTimestamp());
 #endif
-        carbonCopy(verifierEp, passportResponse);
+        carbonCopy(deviceManager, verifierEp, passportResponse);
     }
     else {
         KeyBox &keyBox = passportResponse->getAttKeyBox();
@@ -262,7 +263,7 @@ Message * Firewall::handlePassportRequest(PassportRequest *passportRequest, Devi
     return passportResponse;
 }
 
-Message * Firewall::handlePassportCheck(PassportCheck *passportCheck, Device *device)
+Message * Firewall::handlePassportCheck(DeviceManager &deviceManager, PassportCheck *passportCheck, Device *device)
 {
     if (device == NULL) {
         SD_LOG(LOG_ERR, "null device");
@@ -283,7 +284,7 @@ Message * Firewall::handlePassportCheck(PassportCheck *passportCheck, Device *de
         return NULL;
     }
 
-    device->update(COL_PASSPORT_EXPIRY, to_string(expired));
+    deviceManager.update(device, COL_PASSPORT_EXPIRY, to_string(expired));
     device->setPassportExpiryDate(expired);
 
     const Endpoint relyingParty = device->getRelyingPartyEndpoint();
@@ -310,7 +311,7 @@ bool Firewall::validatePassport(string &deviceID, Passport &passport)
 
     size -= (SIGNATURE_LEN_LEN + slen); // exclude the signature in the verification
 
-    int rc = cryptoServer.verify_it((const uchar *) data.at(0), size, (uchar *) signature.at(0), slen);
+    int rc = rsaVerify.verify_it((const uchar *) data.at(0), size, (uchar *) signature.at(0), slen);
     if (rc != 0) {
         SD_LOG(LOG_ERR, "%s invalid passport signature", deviceID.c_str());
         return false;
@@ -335,7 +336,7 @@ bool Firewall::validatePassport(string &deviceID, Passport &passport)
     return true;
 }
 
-void Firewall::carbonCopy(Endpoint &endpoint, Message *message)
+void Firewall::carbonCopy(DeviceManager &deviceManager, Endpoint &endpoint, Message *message)
 {
     const int MAX_ATTEMPTS = 3;
 
@@ -354,7 +355,7 @@ void Firewall::carbonCopy(Endpoint &endpoint, Message *message)
         sleep(1);
     }
 
-    finalizeAndSend(sock, message);
+    finalizeAndSend(deviceManager, sock, message);
 
     char buf[32];
     recv(sock, buf, 32, 0); // ack; content irrelevant
@@ -389,11 +390,11 @@ Acceptance Firewall::forward(Data *data, Config &config, uint8_t *serialized, ui
         payloadStr = Log::toHex(payload).c_str();
 
     if (accept != ACCEPT) {
-        Log::plain(COLOR_RED, "DROP %11s %s", deviceID.c_str(), payloadStr.c_str());
+        SD_LOG(LOG_ERR, "DROP %11s %s", deviceID.c_str(), payloadStr.c_str());
         accept = REJECT;
     }
     else {
-        Log::plain(COLOR_GREEN, "PASS %11s %s", deviceID.c_str(), payloadStr.c_str());
+        SD_LOG(LOG_INFO, "PASS %11s %s", deviceID.c_str(), payloadStr.c_str());
 
         int sock = Comm::connectTcp(appSvrEndpoint);
         if (sock < 0) {

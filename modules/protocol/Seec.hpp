@@ -1,7 +1,8 @@
 ﻿/*
- * Copyright (c) 2023 Peraton Labs
+ * Copyright (c) 2023-2024 Peraton Labs
  * SPDX-License-Identifier: Apache-2.0
- * @author tchen
+ * 
+ * Distribution Statement “A” (Approved for Public Release, Distribution Unlimited).
  */
 
 #pragma once
@@ -68,6 +69,10 @@ public:
                      string &deviceID, uint32_t &seecSqn, bool sigVerifier);
     void encryptKey(KeyBox &keyBox, Board *board, MeasurementList &measList, string &deviceID);
     void decryptKey(KeyBox &keyBox);
+    void revocation(Vector &payload);
+    void revocationCheck(Vector &iv, Vector &payload, int message_size, MeasurementList &measList,
+                     Board *board, string &deviceID, Crypto *crypto, char *plaintext);
+    void revocationAck(Vector &iv, Vector &payload, Board *board, MeasurementList &measList, uint32_t &revAckSqn);
 #endif
 
     Crypto * getCrypto()

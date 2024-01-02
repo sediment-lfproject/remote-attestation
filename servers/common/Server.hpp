@@ -1,32 +1,38 @@
 ﻿/*
- * Copyright (c) 2023 Peraton Labs
+ * Copyright (c) 2023-2024 Peraton Labs
  * SPDX-License-Identifier: Apache-2.0
- * @author tchen
+ * 
+ * Distribution Statement “A” (Approved for Public Release, Distribution Unlimited).
  */
 
 #pragma once
 
+#include <memory>
 #include "StateMachine.hpp"
-#include "CryptoServer.hpp"
 #include "Seec.hpp"
 #include "Device.hpp"
+#include "DeviceManager.hpp"
 #include "CommandLine.hpp"
 #include "EndpointSock.hpp"
+
 
 using namespace std;
 
 class Server : public StateMachine
 {
 protected:
-    CryptoServer cryptoServer;
     string sediment_home;
-    bool noGUI = false;
+    string dbName;
+    string dbType;
 
-    void runProcedure(EndpointSock *epSock);
+    void runProcedure(EndpointSock *epSock, std::unique_ptr<DeviceManager> deviceManager);
 
-    virtual void calAuthToken(Message *message, uint8_t *serialized, uint32_t len);
+
+    void finalizeAndSend(DeviceManager &deviceManager, int peer_sock, Message *message);
+    virtual void calAuthToken(DeviceManager &deviceManager, Message *message, uint8_t *serialized, uint32_t len);
     virtual void setTimestamp(Message *message);
-    virtual Device * authenticate(Message *message, uint8_t *serialized, uint32_t len);
+
+    virtual Device * authenticate(DeviceManager &deviceManager, Message *message, uint8_t *serialized, uint32_t len);
     virtual time_t getTimestamp();
     virtual void handlePubData(char *data);
 
@@ -38,9 +44,11 @@ protected:
         return NULL;
     }
 
-    virtual Message * handleMessage(Message *message, EndpointSock *src, Device *device, uint8_t *serialized,
+    virtual Message * handleMessage(DeviceManager &deviceManager, Message *message, EndpointSock *src, Device *device,
+      uint8_t *serialized,
       uint32_t len)
     {
+        (void) deviceManager;
         (void) message;
         (void) src;
         (void) device;
@@ -53,21 +61,14 @@ protected:
 public:
     Server(Config &config, Board *board, CommandLine &cli)
         : StateMachine(config, board),
-        cryptoServer(cli),
         sediment_home(cli.getSedimentHome()),
-        noGUI(cli.isNoGUI())
-    {
-        Device::open(cli.getDatabase());
-    }
+        dbName(cli.getDatabase()),
+        dbType(cli.getDatabaseType())
+    { }
 
     virtual ~Server(){ }
 
-    Seec * findSeec(string deviceID);
-
-    const CryptoServer& getCryptoServer() const
-    {
-        return cryptoServer;
-    }
+    Seec * findSeec(DeviceManager &deviceManager, string deviceID);
 
     const string& getSedimentHome() const
     {

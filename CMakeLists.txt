@@ -1,5 +1,6 @@
-# Copyright (c) 2023 Peraton Labs
+# Copyright (c) 2023-2024 Peraton Labs
 # SPDX-License-Identifier: Apache-2.0
+# Distribution Statement “A” (Approved for Public Release, Distribution Unlimited).
 
 cmake_minimum_required(VERSION 3.14)
 
@@ -11,7 +12,17 @@ project(sediment VERSION 0.0.0 LANGUAGES C CXX ASM)
 
 set(ARC ${CMAKE_SYSTEM_PROCESSOR})
 set(LIB "lib/${ARC}")
-message("ARC = ${CMAKE_SYSTEM_PROCESSOR}")
+
+option(SPDLOG_ENABLED "SPDLOG Enabled" ON)
+option(MYSQL_ENABLED "MySQL Enabled" OFF)
+
+if(NOT WIN32)
+  string(ASCII 27 Esc)
+  set(ColourReset "${Esc}[m")
+  set(BoldGreen   "${Esc}[1;32m")
+endif()
+
+include(${CMAKE_CURRENT_SOURCE_DIR}/version.cmake)
 
 add_compile_definitions(PLATFORM_RPI=1)
 
@@ -27,11 +38,13 @@ include_directories(${PROVER} PRIVATE data)
 include_directories(include)
 include_directories(modules)
 include_directories(${SVR_COMMON})
+include_directories(${CMAKE_CURRENT_BINARY_DIR}/generated)
 
 link_libraries(
   mbedtls
   mbedcrypto
   mbedx509  
+  mysqlcppconn
   paho-mqttpp3
   paho-mqtt3as
 )
@@ -120,7 +133,6 @@ endif()
 if(DEFINED UBUNTU_AFTER_2017)
   compile_options(${PROVER} PUBLIC ${UBUNTU_AFTER_2017})
 endif()
-
 add_subdirectory(apps/rpi/udf)
 add_subdirectory(modules/protocol)
 add_subdirectory(servers/common)

@@ -1,7 +1,8 @@
 ﻿/*
- * Copyright (c) 2023 Peraton Labs
+ * Copyright (c) 2023-2024 Peraton Labs
  * SPDX-License-Identifier: Apache-2.0
- * @author tchen
+ * 
+ * Distribution Statement “A” (Approved for Public Release, Distribution Unlimited).
  */
 
 #include <vector>
@@ -23,10 +24,10 @@ uint32_t KeyBox::getSize()
 
 string KeyBox::toString()
 {
-    return SD_TO_STRING(
-        "\nkeyPurpose: " + TO_KEY_PURPOSE(keyPurpose)
+    return
+          "\nkeyPurpose: " + TO_KEY_PURPOSE(keyPurpose)
         + "\nencType: " + TO_KEY_ENC_TYPE(encType)
-        + "\naesKey (len): " + to_string(encryptedKey.size())); // +  // Log::toHex((char *)&encryptedKey[0], encryptedKey.size()) +
+        + "\naesKey (len): " + to_string(encryptedKey.size()); // +  // Log::toHex((char *)&encryptedKey[0], encryptedKey.size()) +
 }
 
 void KeyBox::decode(Vector &data)

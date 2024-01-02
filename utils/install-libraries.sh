@@ -1,6 +1,7 @@
 #! /bin/bash
-# Copyright (c) 2023 Peraton Labs
+# Copyright (c) 2023-2024 Peraton Labs
 # SPDX-License-Identifier: Apache-2.0
+# Distribution Statement “A” (Approved for Public Release, Distribution Unlimited).
 
 echo "Enter SEDIMENT installation directory (press Enter for default: ~/sediment): "  
 read SEDIMENT
@@ -23,6 +24,7 @@ sudo apt-get install -y libsqlite3-dev
 sudo apt-get install -y mosquitto
 sudo apt-get install -y sqlite3
 sudo apt-get install -y libsqlite3-dev
+sudo apt-get install -y libmysqlcppconn-dev
 
 echo "Please download and install mbedtls version 3.1.0 from https://github.com/Mbed-TLS/mbedtls."
 echo "The latest version may also work, but 3.1.0 is the version tested."

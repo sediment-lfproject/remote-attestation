@@ -1,0 +1,14 @@
+verifier id:RAP_Server
+verifier incoming:tcp:127.0.0.1:8100
+verifier outgoing:tcp:127.0.0.1:8000
+
+enc_enabled true
+auth_enabled true
+attest_enabled true
+seec_enabled true
+sign_enabled true
+log_level 8
+
+passport_period 86400
+pass_thru_enabled true
+

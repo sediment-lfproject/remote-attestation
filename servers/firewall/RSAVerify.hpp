@@ -1,7 +1,8 @@
 ﻿/*
- * Copyright (c) 2023 Peraton Labs
+ * Copyright (c) 2023-2024 Peraton Labs
  * SPDX-License-Identifier: Apache-2.0
- * @author tchen
+ * 
+ * Distribution Statement “A” (Approved for Public Release, Distribution Unlimited).
  */
 
 #pragma once
@@ -20,17 +21,13 @@
 typedef unsigned char uchar;
 #define UNUSED(x) ((void) x)
 
-class CryptoServer : public Crypto
+class RSAVerify : public Crypto
 {
 private:
-    EVP_PKEY *signingKey;
     EVP_PKEY *verifyingKey;
 
 public:
-    CryptoServer(CommandLine &cli);
+    RSAVerify(const string &verify_key_pem);
 
-    int sign_it(const uchar *msg, size_t mlen, uchar **sig, size_t *slen);
     int verify_it(const uchar *msg, size_t mlen, const uchar *sig, size_t slen);
-    int make_keys(EVP_PKEY **skey, EVP_PKEY **vkey);
-    int test();
 };

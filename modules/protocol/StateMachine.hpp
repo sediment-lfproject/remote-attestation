@@ -1,7 +1,8 @@
 ﻿/*
- * Copyright (c) 2023 Peraton Labs
+ * Copyright (c) 2023-2024 Peraton Labs
  * SPDX-License-Identifier: Apache-2.0
- * @author tchen
+ * 
+ * Distribution Statement “A” (Approved for Public Release, Distribution Unlimited).
  */
 
 #pragma once
@@ -39,14 +40,14 @@ protected:
         return NULL;
     }
 
-    virtual void calAuthToken(Message *message, uint8_t *serialized, uint32_t len) = 0;
+    // virtual void calAuthToken(Message *message, uint8_t *serialized, uint32_t len) = 0;
     virtual void setTimestamp(Message *message) = 0;
 
 public:
     StateMachine(Config &config, Board *board) :
         config(config),
         board(board),
-        mqtt(config.getTopicPub(), config.getTopicSub(), this)
+        mqtt(config.getTopicPub(), config.getTopicSub(), config.getTopicRev(), this)
     {
         board->setId(config.getComponent().getID());
     }
@@ -54,7 +55,7 @@ public:
     virtual ~StateMachine()
     { }
 
-    virtual void finalizeAndSend(int peer_sock, Message *message);
+    // virtual void finalizeAndSend(int peer_sock, Message *message);
     virtual bool sendMessage(int peer_sock, MessageID messageID, uint8_t *serialized, uint32_t msg_len);
 
     const Endpoint& getEndpoint() const

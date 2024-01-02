@@ -1,6 +1,8 @@
 /*
- * Copyright (c) 2023 Peraton Labs
+ * Copyright (c) 2023-2024 Peraton Labs
  * SPDX-License-Identifier: Apache-2.0
+ *
+ * Distribution Statement “A” (Approved for Public Release, Distribution Unlimited).
  */
 
 #include <iostream>
@@ -9,6 +11,9 @@
 #include "Board.hpp"
 #include "Log.hpp"
 
+/*
+ * Run MQTT only, without SEDIMENT
+ */
 void Prover::runMqtt()
 {
     string url = config.getMqttUrl();
@@ -22,17 +27,15 @@ void Prover::runMqtt()
     while (true) {
         uint32_t ts         = (board != NULL) ? board->getTimestamp() : 0;
         uint64_t start_time = board->getTimeInstant();
-        uint32_t temp       = board->getTemperature();
-        uint32_t humid      = board->getHumidity();
         uint32_t elapsed    = board->getElapsedTime(start_time);
 
         const int message_size = config.getPayloadSize();
         char message[message_size];
         memset(message, '_', message_size); // pad the buffer
-        int n = snprintf(message, message_size, "%d,%d,%s,%d,%d,%d",
-            elapsed, ts, id.c_str(), board->getSeq(), temp, humid);
+
+        int n = snprintf(message, message_size, "%d,%d,%s,", elapsed, ts, id.c_str());
+        board->getAllSensors(board->getSeq(), message + n, message_size - n);
         message[message_size - 1] = '\0';
-        message[n] = '_';
 
         mqtt.publish(message);
 

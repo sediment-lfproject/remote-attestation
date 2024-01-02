@@ -1,7 +1,8 @@
 ﻿/*
- * Copyright (c) 2023 Peraton Labs
+ * Copyright (c) 2023-2024 Peraton Labs
  * SPDX-License-Identifier: Apache-2.0
- * @author tchen
+ * 
+ * Distribution Statement “A” (Approved for Public Release, Distribution Unlimited).
  */
 
 #include <iostream>
@@ -13,7 +14,7 @@
 #include "Prover.hpp"
 #include "Config.hpp"
 #include "BoardRPI.hpp"
-#include "CommandLine.hpp"
+#include "ProverCL.hpp"
 #include "Enum.hpp"
 #include "Utils.hpp"
 
@@ -21,26 +22,18 @@ using namespace std;
 
 int main(int argc, char **argv)
 {
-    CommandLine cli;
+    ProverCL cli;
 
     cli.parseCmdline(argc, argv);
 
     Config config(NV_PROVER);
-    config.parseFile(cli.getPublisherConfig());
-
-#ifdef SEEC_ENABLED
-    Utils::readRsaKey(cli.getRsaPrivateKey(), KeyDistRSA::getPrivateKey());
-    Utils::readRsaKey(cli.getRsaPublicKey(), KeyDistRSA::getPublicKey());
-#endif
+    config.parseFile(cli.getConfig());
 
     BoardRPI *board = new BoardRPI(argv[0]);
-    board->setConfigFile(cli.getPublisherConfig());
+    board->setConfigFile(cli.getConfig());
     
     Prover prover(config, board);
-#ifdef PLATFORM_RPI
     prover.setSedimentHome(cli.getSedimentHome());
-#endif
-
     board->saveReportInterval(config.getReportInterval());
 
     if (config.getTransport() == TRANSPORT_MQTT)

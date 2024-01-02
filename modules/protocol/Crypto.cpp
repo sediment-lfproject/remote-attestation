@@ -1,7 +1,8 @@
 ﻿/*
- * Copyright (c) 2023 Peraton Labs
+ * Copyright (c) 2023-2024 Peraton Labs
  * SPDX-License-Identifier: Apache-2.0
- * @author tchen
+ * 
+ * Distribution Statement “A” (Approved for Public Release, Distribution Unlimited).
  */
 
 #include <iomanip>
@@ -209,9 +210,11 @@ int Crypto::sha256(const unsigned char *input, int input_size, unsigned char *ou
     //    if (output_size != 32)
     //        return 0;
 
+    // TODO - mbedtls_sha256 is a void function, update return value?
     // return non-zero on success
     // 0 here means use the full SHA-256, not the SHA-224 variant
-    return mbedtls_sha256(input, input_size, output, 0);
+    mbedtls_sha256(input, input_size, output, 0);
+    return 1;
 }
 
 #else // if defined(USE_SPM)
@@ -551,9 +554,11 @@ int Crypto::sha256(const unsigned char *input, int input_size, unsigned char *ou
     //    if (output_size != 32)
     //        return 0;
 
+    // TODO - mbedtls_sha256 is a void function, update return value?
     // return non-zero on success
     // 0 here means use the full SHA-256, not the SHA-224 variant
-    return mbedtls_sha256(input, input_size, output, 0);
+    mbedtls_sha256(input, input_size, output, 0);
+    return 1;
 }
 
 #endif // PLATFORM_NRF9160

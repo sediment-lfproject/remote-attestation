@@ -1,7 +1,8 @@
 ﻿/*
- * Copyright (c) 2023 Peraton Labs
+ * Copyright (c) 2023-2024 Peraton Labs
  * SPDX-License-Identifier: Apache-2.0
- * @author tchen
+ * 
+ * Distribution Statement “A” (Approved for Public Release, Distribution Unlimited).
  */
 
 #include <zephyr.h>
@@ -23,7 +24,8 @@ using namespace std;
 
 extern "C" 
 {
-    int reload(const char *item_name, int size, uint8_t *buf);
+    void save_sqn(SQN_Type sqn_type, uint32_t sqn);
+    uint32_t read_sqn(SQN_Type sqn_type);
 }
 
 void BoardZephyr::sleepSec(uint32_t sec)
@@ -90,82 +92,65 @@ void * BoardZephyr::getStartingAddr(string &library_keyword, uint32_t *blockSize
 
 void BoardZephyr::saveAttestSqn(uint32_t sqn)
 {
-    SD_LOG(LOG_INFO, "saveAttestSqn() %d", sqn);
-
-    int ret = do_erase(NV_RA_OFFSET, NV_PAGE_SIZE);
-    if (ret) {
-        SD_LOG(LOG_ERR, "erase RA SQN page failed");
-        return;
-    }
-
-    uint8_t *buf = (uint8_t *) &sqn;
-    write_item((char *) NV_ATTEST_SQN, NV_LEN_ATTEST_SQN, buf);
+    save_sqn(SQN_ATTEST, sqn);
 }
 
 uint32_t BoardZephyr::getAttestSqn()
 {
-    uint8_t buf[16];
-
-    if (reload(NV_ATTEST_SQN, sizeof(buf), buf) == 0) {
-        return *(uint32_t *) buf;
-    }
-
-    SD_LOG(LOG_ERR, "getAttestSqn() failed");
-    return 0;
+    return read_sqn(SQN_ATTEST);
 }
 
 void BoardZephyr::saveSeecSqn(uint32_t sqn)
 {
-    SD_LOG(LOG_INFO, "saveSeecSqn() %d", sqn);
-
-    int ret = do_erase(NV_OFFSET_SEEC_SQN, NV_PAGE_SIZE);
-    if (ret) {
-        SD_LOG(LOG_ERR, "erase SEEC SQN page failed");
-        return;
-    }
-
-    uint8_t *buf = (uint8_t *) &sqn;
-    write_item((char *) NV_SEEC_SQN, NV_LEN_SEEC_SQN, buf);
+    save_sqn(SQN_SEEC, sqn);
 }
 
 uint32_t BoardZephyr::getSeecSqn()
 {
-    uint8_t buf[16];
+    return read_sqn(SQN_SEEC);
+}
 
-    if (reload(NV_SEEC_SQN, sizeof(buf), buf) == 0) {
-        return *(uint32_t *) buf;
-    }
+void BoardZephyr::saveRevCheckSqn(uint32_t sqn)
+{
+    save_sqn(SQN_REV_CHECK, sqn);
+}
 
-    SD_LOG(LOG_ERR, "getSeecSqn() failed");
-    return 0;
+uint32_t BoardZephyr::getRevCheckSqn()
+{
+    return read_sqn(SQN_REV_CHECK);
+}
+
+void BoardZephyr::saveRevAckSqn(uint32_t sqn)
+{
+    save_sqn(SQN_REV_ACK, sqn);
+}
+
+uint32_t BoardZephyr::getRevAckSqn()
+{
+    return read_sqn(SQN_REV_ACK);
 }
 
 uint32_t BoardZephyr::getReportInterval()
 {
-    uint8_t buf[16];
-
-    if (reload(NV_REPORT_INTVL, sizeof(buf), buf) == 0) {
-        return *(uint32_t *) buf;
-    }
-
-    SD_LOG(LOG_ERR, "getReportInterval() failed");
+    SD_LOG(LOG_ERR, "getReportInterval() not implemented");
     return 0;
+//     uint8_t buf[16];
+
+//     if (reload(NV_REPORT_INTVL, sizeof(buf), buf) == 0) {
+//         return *(uint32_t *) buf;
+//     }
+
+//     SD_LOG(LOG_ERR, "getReportInterval() failed");
+//     return 0;
 }
 
 bool isVariableLen(string key)
 {
     return !(key.compare(NV_PARAMS) &&
              key.compare(NV_SIGNKEY) &&
-             key.compare(NV_URIPATH) &&
+             key.compare(NV_EURIPATH) &&
+             key.compare(NV_SURIPATH) &&
              key.compare(NV_TIMEPATH));
-}
-
-bool isVariableLenSize(string key)
-{
-    return !(key.compare(NV_PARAMS_SIZE) &&
-             key.compare(NV_URIPATH_SIZE) &&
-             key.compare(NV_TIMEPATH_SIZE) &&
-             key.compare(NV_SIGNKEY_SIZE));
 }
 
 /**
@@ -174,6 +159,7 @@ bool isVariableLenSize(string key)
 */
 char* BoardZephyr::getConfigBlocks(int *size) 
 {
+#if 0
     int total = 0;
     int num_items = sizeof(attested_items) / sizeof(Item);
     for (int i = 0; i < num_items; i++)
@@ -215,4 +201,6 @@ char* BoardZephyr::getConfigBlocks(int *size)
     // dump((const uint8_t *)pool, num_items);
     // dump_hex_ascii((const uint8_t *)pool, total);
     return pool;
+#endif
+    return NULL;    
 }
